@@ -1,0 +1,140 @@
+Layer,Category,Topic Aspect,Fine-grained Dimension
+Institutional Norms,Geography & Customs,Population and Geography,population rank
+Institutional Norms,Geography & Customs,Population and Geography,population distribution
+Institutional Norms,Geography & Customs,Population and Geography,land area percentage
+Institutional Norms,Geography & Customs,Population and Geography,main regions
+Institutional Norms,Geography & Customs,Population and Geography,ethnicity
+Institutional Norms,Geography & Customs,Population and Geography,official languages
+Institutional Norms,Geography & Customs,Population and Geography,widely spoken languages
+Institutional Norms,Geography & Customs,Population and Geography,famous river
+Institutional Norms,Geography & Customs,Population and Geography,climate
+Institutional Norms,Geography & Customs,Dates of Significance,national holidays
+Institutional Norms,Geography & Customs,Dates of Significance,religious holidays
+Institutional Norms,Geography & Customs,Dates of Significance,cultural holidays
+Institutional Norms,Geography & Customs,Dates of Significance,origin of festivals
+Institutional Norms,Geography & Customs,Dates of Significance,celebration of festivals
+Institutional Norms,Geography & Customs,Dates of Significance,symbol of festivals
+Institutional Norms,Regulation & Policy,Transportation Rules,vehicle movement rules
+Institutional Norms,Regulation & Policy,Transportation Rules,traffic signs and signals
+Institutional Norms,Regulation & Policy,Transportation Rules,pedestrian and non-motorized vehicles
+Institutional Norms,Regulation & Policy,Transportation Rules,motor vehicle driving rules
+Institutional Norms,Regulation & Policy,Transportation Rules,parking regulations
+Institutional Norms,Regulation & Policy,Data Format,data order
+Institutional Norms,Regulation & Policy,Data Format,separator type
+Institutional Norms,Regulation & Policy,Data Format,year format
+Institutional Norms,Regulation & Policy,Data Format,month representation
+Institutional Norms,Regulation & Policy,Data Format,zero-padding
+Institutional Norms,Regulation & Policy,Data Format,natural language date
+Institutional Norms,Regulation & Policy,Data Format,calendar system
+Institutional Norms,Regulation & Policy,Measurement Unit,measurement system
+Institutional Norms,Regulation & Policy,Measurement Unit,localization
+Institutional Norms,Regulation & Policy,Financial Market Rules,regulation structure
+Institutional Norms,Regulation & Policy,Financial Market Rules,market type
+Institutional Norms,Regulation & Policy,Financial Market Rules,entity type
+Institutional Norms,Regulation & Policy,Financial Market Rules,access & licensing
+Institutional Norms,Regulation & Policy,Financial Market Rules,conduct & compliance
+Institutional Norms,Regulation & Policy,Financial Market Rules,capital & risk
+Institutional Norms,Regulation & Policy,Financial Market Rules,monetary & payment system
+Institutional Norms,Regulation & Policy,Financial Market Rules,finTech regulation
+Institutional Norms,Regulation & Policy,Financial Market Rules,tax & accounting
+Institutional Norms,Regulation & Policy,Financial Market Rules,international alignment
+Institutional Norms,Regulation & Policy,Financial Market Rules,stability & resolution
+Behavioral Patterns,Personal Choices & Habits,Daily Life and Travel,payment habits
+Behavioral Patterns,Personal Choices & Habits,Daily Life and Travel,travel habits
+Behavioral Patterns,Personal Choices & Habits,Daily Life and Travel,bathing habits
+Behavioral Patterns,Personal Choices & Habits,Daily Life and Travel,pet-raising habits
+Behavioral Patterns,Personal Choices & Habits,Daily Life and Travel,social media usage pattern
+Behavioral Patterns,Personal Choices & Habits,Daily Life and Travel,marriage customs
+Behavioral Patterns,Personal Choices & Habits,Diet and Health Concept,eating habits
+Behavioral Patterns,Personal Choices & Habits,Diet and Health Concept,"attitudes towards birth, aging, illness and death"
+Behavioral Patterns,Personal Choices & Habits,Diet and Health Concept,traditional and modern medicine
+Behavioral Patterns,Personal Choices & Habits,Education and Knowledge,educational practices
+Behavioral Patterns,Personal Choices & Habits,Education and Knowledge,teacher student concept
+Behavioral Patterns,Personal Choices & Habits,Education and Knowledge,major selection
+Behavioral Patterns,Personal Choices & Habits,Education and Knowledge,career choices
+Behavioral Patterns,Personal Choices & Habits,Art and Entertainment,festive entertainment activities in different places with the same origin
+Behavioral Patterns,Personal Choices & Habits,Art and Entertainment,traditional music and dance
+Behavioral Patterns,Personal Choices & Habits,Art and Entertainment,contemporary art
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,basic etiquette
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,naming convention
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,name origin
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,name significance
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,punctuality when visiting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,shoe etiquette during a visit
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,hospitality customs when receiving guests
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,bringing gifts for the host
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,seating etiquette for guests and hosts
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,serving etiquette during a visit
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,leaving food after eating
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,using salt while eating
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,giving compliments during a meal
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,eating with the right hand
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,alcohol
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,pork
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,handing gifts
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,gifts for children
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,opening gifts
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,general greeting principles
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,greeting between men and men
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,greeting between women and women
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,greeting between men to women
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,appointment scheduling before the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,dress code before the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,business card exchange before the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,network building before the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,age and experience before the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,familiarity before the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,socialization during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,meeting duration during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,open door policy during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,interruptions during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,deference to senior during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,negotiation style during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,decision making during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,bartering during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,private meetings during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,confrontation avoidance during the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,follow up after the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,ongoing negotiations after the business meeting
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,communication style
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,indirect communication
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,humour
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,physical contact
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,personal space
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,gestures
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,beckoning
+Behavioral Patterns,Personal Choices & Habits,Etiquette and Courtesy,eye contact
+Core Values and Social Structures,Social Relationship and Structures,Fixed Expressions in Language,idiom
+Core Values and Social Structures,Social Relationship and Structures,Fixed Expressions in Language,common saying
+Core Values and Social Structures,Social Relationship and Structures,Fixed Expressions in Language,proverb
+Core Values and Social Structures,Social Relationship and Structures,Fixed Expressions in Language,neologism and abbreviation
+Core Values and Social Structures,Social Relationship and Structures,Family Dynamics,communal living
+Core Values and Social Structures,Social Relationship and Structures,Family Dynamics,parental care
+Core Values and Social Structures,Social Relationship and Structures,Family Dynamics,patriarchy
+Core Values and Social Structures,Social Relationship and Structures,Family Dynamics,women roles in the family
+Core Values and Social Structures,Social Relationship and Structures,Household Structures,social interaction
+Core Values and Social Structures,Social Relationship and Structures,Household Structures,urban rural gap
+Core Values and Social Structures,Social Relationship and Structures,Household Structures,concept of seniority and childhood
+Core Values and Social Structures,Social Relationship and Structures,Gender Roles,male dominance
+Core Values and Social Structures,Social Relationship and Structures,Gender Roles,social compliance
+Core Values and Social Structures,Social Relationship and Structures,Gender Roles,honour gender
+Core Values and Social Structures,Social Relationship and Structures,Gender Roles,changing attitudes of gender
+Core Values and Social Structures,Social Relationship and Structures,Culture Values,power distance
+Core Values and Social Structures,Social Relationship and Structures,Culture Values,collectivism
+Core Values and Social Structures,Social Relationship and Structures,Culture Values,individualism
+Core Values and Social Structures,Social Relationship and Structures,Culture Values,motivation towards achievement and success
+Core Values and Social Structures,Social Relationship and Structures,Culture Values,uncertainty avoidance
+Core Values and Social Structures,Social Relationship and Structures,Culture Values,long term orientation
+Core Values and Social Structures,Social Relationship and Structures,Culture Values,indulgence
+Core Values and Social Structures,Values and Beliefs,Religion,religion
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,modest dress
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,informality
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,compliments
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,cultural acknowledgement
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,education
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,insults
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,dirty jokes
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,political criticism
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,sensitive topics
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,ethnicity assumptions
+Core Values and Social Structures,Values and Beliefs,Do's and Don'ts,stereotyping
