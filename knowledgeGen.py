@@ -1,6 +1,11 @@
 from openai import OpenAI
 import json
 import os
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # API key initialization
 client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
@@ -52,7 +57,7 @@ def extract_features(text, culture, dimension):
 if __name__ == "__main__":
 
 
-    ruta_archivo = r"C:\Users\Andres\Repos\Cultural_thesis\Cultural\results.json"
+    ruta_archivo = r"C:\Users\Andres\Repos\Cultural_thesis\results.json"
 
     resultados = [] 
 
@@ -81,7 +86,7 @@ if __name__ == "__main__":
 
 
 
-    with open("knowledge_results.json", "w", encoding="utf-8") as f:
+    with open("knowledge_input.json", "w", encoding="utf-8") as f:
         json.dump(resultados, f, ensure_ascii=False, indent=2)
 
     result = extract_features(text=test_content, culture=test_culture, dimension=test_dimension)
