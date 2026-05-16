@@ -1,4 +1,6 @@
 from duckDuckGo import fetch_raw_results
+from knowledgeGen import create_knowledge
+
 import json
 
 
