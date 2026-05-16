@@ -4,7 +4,7 @@ from ddgs import DDGS
 
 
 
-def fetch_page_content(url, max_chars=5000):
+def fetch_page_content(url, max_chars=50000):
     """Fetch and extract text 
     content from a URL."""
     try:
@@ -24,8 +24,12 @@ def fetch_page_content(url, max_chars=5000):
 
 
 def fetch_raw_results(query, num_results=10, fetch_full_content=False):
-    """Search with DuckDuckGo and optionally 
-    fetch full content of results."""
+    """
+    Search with DuckDuckGo and optionally 
+    fetch full content of results. 
+    Format: [{{"title": "...", "link": "...", "content": "..."}}, ...]
+    """
+
     context = []
 
     print(f"--- Search Results for: {query} ---")
@@ -68,11 +72,4 @@ def fetch_raw_results(query, num_results=10, fetch_full_content=False):
 
     print("=== Finished processing all results ===")
     return context
-
-
-# if __name__ == "__main__":
-
-#     dimension = "Food"
-#     culture= "Colombian"
-#     fetch_raw_results(f"{dimension} in {culture} culture", fetch_full_content=True)
 
