@@ -35,13 +35,12 @@ def create_knowledge(text, culture, dimension):
     - snippet: the original text supporting this feature.
     - Knowledge: a concise summary of the information related to the {dimension} dimension in the {culture} culture, based solely on the provided text.
 
-    If the text **does not contain enough information about the culture**, do not invent anything and say "Not enough information."
+    If the text **does not contain enough information about the culture**, do not invent anything and say "Not enough information." in all fields.
 
     Texts to analyze:
     {prompt_texts}
 
     """
-
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[{"role": "user", "content": prompt}]
