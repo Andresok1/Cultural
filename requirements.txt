@@ -4,4 +4,5 @@ beautifulsoup4==4.12.2
 python-dotenv==1.0.1
 duckduckgo-search==8.1.1
 openai==2.26.0
+pandas==3.0.3
 #python 3.11
