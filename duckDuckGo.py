@@ -23,7 +23,7 @@ def fetch_page_content(url, max_chars=50000):
         return f"Could not fetch content: {e}"
 
 
-def fetch_raw_results(query, num_results=10, fetch_full_content=False):
+def fetch_raw_results(query, num_results=10, fetch_full_content=False, print_on=False):
     """
     Search with DuckDuckGo and optionally 
     fetch full content of results. 
@@ -45,14 +45,14 @@ def fetch_raw_results(query, num_results=10, fetch_full_content=False):
             link = item.get('href', '') #get the URL of result  
             snippet = item.get('body', '')
 
-            print(f"[{i}] Title: {title}")
-            print(f"    Link:  {link}", flush=True)
+            print(f"[{i}] Title: {title}") if print_on else None
+            print(f"    Link:  {link}", flush=True) if print_on else None
 
             if fetch_full_content:
-                print(f"    Fetching content...", end=" ", flush=True)
+                print(f"    Fetching content...", end=" ", flush=True) if print_on else None
                 content = fetch_page_content(link)
-                print("Done!")
-                print(f"    Content: {content[:500]}...\n")
+                print("Done!") if print_on else None
+                print(f"    Content: {content[:500]}...\n") if print_on else None
                 context.append({
                     "position:":i,
                     "title": title,
@@ -60,7 +60,7 @@ def fetch_raw_results(query, num_results=10, fetch_full_content=False):
                     "content": content
                 })
             else:
-                print(f"    Snippet: {snippet}\n")
+                print(f"    Snippet: {snippet}\n") if print_on else None
                 context.append({
                     "title": title,
                     "link": link,
