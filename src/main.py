@@ -93,24 +93,21 @@ for query, info in data.items():
     knowledge_output= []
 
     count = 0
-    max_results = 3     #TODO: args to control number of considered documents for knowledge generation
 
-    if single:  #'''TODO: se arman grupos de knowldge aca->funcion'''
+    if args.knowledge_level == "single":  #'''TODO: se arman grupos de knowldge aca->funcion'''
         for doc in docs:
             content = doc.get('content')   #optimizar con knowledger_input y sacar el create_knowledge del if
-            if content:     
+            if content and len(content.strip()) > 300:     
                 kl= create_knowledge(text=content, culture=culture, dimension=dimension)
                 knowledge_output.append(kl)    ###Knowledge result by each doc
                 count += 1
             
-            if count >= max_results:
+            if count >= args.max_results:
                 break
-        if count < max_results:
-            print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {max_results})")
+        if count < args.max_results:
+            print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
 
-
-
-    else: 
+    else: #multi knowledge level
         for doc in docs:
             content = doc.get('content')
 
@@ -118,10 +115,10 @@ for query, info in data.items():
                 knowledge_input.append({content})
                 count += 1
 
-            if count >= max_results:
+            if count >= args.max_results:
                 break
-        if count < max_results:
-            print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {max_results})")
+        if count < args.max_results:
+            print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
         
         kl= create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
         kl_cleaned = kl.replace(";", ",").strip() 
@@ -133,7 +130,7 @@ for query, info in data.items():
 
     knowledge_path = rf"C:\Users\Andres\Repos\Cultural_thesis\results\knowledge_output_{culture}.json"
 
-    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path)
+    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path, culture, args.question_language)
 
     df_dimension = pd.DataFrame([{"culture": culture, "dimension": dimension}])
 
