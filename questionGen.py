@@ -10,7 +10,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # API key initialization
 client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
-def create_question(text, question_type):
+def create_question(text, question_type, culture, question_language):
     """
     Extracts important features and content related to a specific culture
     from a given text. Returns format: title, original snippet and knowledge extrated from the text.
@@ -23,6 +23,17 @@ def create_question(text, question_type):
 
     prompt_texts = "\n\n".join([f"Context {i}:\n{text}" for i, text in enumerate(texts, 1)])
 
+    
+    if question_language == "local":
+         
+        local_dictionary = {
+            "colombian": "Spanish",
+            "italian": "Italian",
+            "german": "German"}
+
+        idiom = local_dictionary.get(culture.lower(), "English")
+    else:        
+        idiom = "English"
 
     if question_type == "factual":
         instruction = f"""
@@ -43,8 +54,9 @@ def create_question(text, question_type):
     else:
         raise ValueError("Invalid question type. Must be one of: factual, comparative, causal, hypothetical.")
 
+
     prompt = f"""
-        Task: Answer in English.
+        Task: Answer in {idiom}.
         Instruction:
         {instruction}
         Note:
@@ -52,6 +64,7 @@ def create_question(text, question_type):
         or characteristics, in order to effectively assess the student’s understanding
         of cultural traits.
         2. A reference answer should be provided after the question.
+        3. Do not change the structure of "Question" and "Reference Answer" in the output, as they will be used for evaluation. Just fill in the content after these labels.
         Context:
         {prompt_texts}
         Question:
@@ -69,7 +82,7 @@ def create_question(text, question_type):
     content = response.choices[0].message.content
     return content
 
-def knowledge_to_question(knowledge_path):
+def knowledge_to_question(knowledge_path, culture, question_language):
     '''This function creates questions from knowledge.
        It gives knowledge_list, title_list and snippet_list scaning the knowledge_path 
     '''
@@ -97,29 +110,29 @@ def knowledge_to_question(knowledge_path):
 
         print(f"Processing knowledge item: {item['title']}")  # Debug print to check the content of each item
         
-        know = item['Knowledge']
+        know = item.get('Knowledge') or item.get('knowledge')
         know_cleaned = know.replace(";", ",").strip()
 
-        titl = item['title']
+        titl = item.get('Title') or item.get('title')
         title_cleaned = titl.replace(";", ",").strip()
 
-        snipp = item['snippet']
+        snipp = item.get('Snippet') or item.get('snippet')
         snippet_cleaned = snipp.replace(";", ",").strip()
 
         knowledge_list.append(know_cleaned)
         title_list.append(title_cleaned)
         snippet_list.append(snippet_cleaned)
 
-    question_reference = create_question(text=knowledge_list, question_type="factual")
+    question_reference = create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=question_language)
     
     parts = question_reference.split("Reference Answer:")
 
     question_text = parts[0].replace("Question:", "").strip()
     
-    split_index = question_text.find("A)")
+    split_index = question_text.find("A)") or question_text.find("a)")
 
     question = question_text[:split_index].strip()
-    question_cleaned = question_text.replace("\n", " ")
+    question_cleaned = question.replace("\n", " ")
 
     abcd_options = question_text[split_index:].strip()
     abcd_options_cleaned = abcd_options.replace("  ", " ")
@@ -136,7 +149,7 @@ def knowledge_to_question(knowledge_path):
 
 
 
-    with open("question_reference.json", "w", encoding="utf-8") as f:
+    with open("results/question_reference.json", "w", encoding="utf-8") as f:
         json.dump(question_dict, f, ensure_ascii=False, indent=2)
 
     return question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
