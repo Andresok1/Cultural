@@ -1,5 +1,6 @@
 from duckDuckGo import fetch_raw_results
 from knowledgeGen import create_knowledge
+from questionGen import knowledge_to_question
 
 import json
 import pandas as pd
@@ -11,7 +12,7 @@ single= True   #single knowledge for each doc, else: one knowledge for all docs
 ### Search dimensions and cultures to query creation
 dimensions = [
     "population rank",
-    # "population distribution",
+    "famous rives",
     # "land area percentage",
     # "ethnicity",
     # "official languages",
@@ -22,8 +23,9 @@ dimensions = [
 ]
 
 cultures= [
-    "colombian",
-    "german",
+    "Colombian",
+    "German",
+    "Italian",
 ]
 
 all_results = {}
