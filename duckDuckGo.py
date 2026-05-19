@@ -1,6 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 from ddgs import DDGS
+import chardet
+from charset_normalizer import from_bytes
 
 
 
@@ -50,14 +52,30 @@ def fetch_raw_results(query, num_results=10, fetch_full_content=False, print_on=
 
             if fetch_full_content:
                 print(f"    Fetching content...", end=" ", flush=True) if print_on else None
-                content = fetch_page_content(link)
+                # content = fetch_page_content(link)
+                # content_cleaned = content.replace("\n", " ").strip()
+                # print("Done!") if print_on else None
+                # print(f"    Content: {content[:500]}...\n") if print_on else None
+
+                raw_bytes = fetch_page_content(link)  # debe devolver bytes
+                if isinstance(raw_bytes, str):  # si fetch_page_content devuelve str, convertir a bytes
+                    raw_bytes = raw_bytes.encode('utf-8', errors='replace')
+                
+                detected = chardet.detect(raw_bytes)
+                # detected = from_bytes(raw_bytes)[0].encoding
+                encoding = detected['encoding'] if detected['encoding'] else 'utf-8'
+                content = raw_bytes.decode(encoding, errors="replace")  # reemplaza caracteres inválidos
+
+                content_cleaned = content.replace("\n", " ").strip()
+                
                 print("Done!") if print_on else None
-                print(f"    Content: {content[:500]}...\n") if print_on else None
+                print(f"    Content: {content_cleaned[:500]}...\n") if print_on else None
+
                 context.append({
                     "position:":i,
                     "title": title,
                     "link": link,
-                    "content": content
+                    "content": content_cleaned
                 })
             else:
                 print(f"    Snippet: {snippet}\n") if print_on else None
