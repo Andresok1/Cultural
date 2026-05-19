@@ -30,8 +30,8 @@ cultures= [
 
 all_results = {}
 
-for dimension in dimensions:
-    for culture in cultures:
+for culture in cultures:
+    for dimension in dimensions:
 
         query = f"{dimension} in {culture} culture"
 
