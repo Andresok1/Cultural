@@ -80,11 +80,35 @@ def knowledge_to_question(knowledge_path):
     snippet_list = []
 
     with open(knowledge_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+        knowledge_data = json.load(f)
 
-    for item_str in data:
-        item = json.loads(item_str)  # Convertir el string JSON a diccionario
-        knowledge_list.append(item['Knowledge'])
+    for knowledge_set in knowledge_data:
+
+        if not knowledge_set or not knowledge_set.strip():
+            print("Warning: empty knowledge_set, skipping")
+            continue
+        
+        try:
+            item = json.loads(knowledge_set)  # it converts the string back to a dictionary 
+
+        except json.JSONDecodeError:
+            print(f"Warning: invalid JSON, skipping: {knowledge_set[:50]}...")
+            continue
+
+        print(f"Processing knowledge item: {item['title']}")  # Debug print to check the content of each item
+        
+        know = item['Knowledge']
+        know_cleaned = know.replace(";", ",").strip()
+
+        titl = item['title']
+        title_cleaned = titl.replace(";", ",").strip()
+
+        snipp = item['snippet']
+        snippet_cleaned = snipp.replace(";", ",").strip()
+
+        knowledge_list.append(know_cleaned)
+        title_list.append(title_cleaned)
+        snippet_list.append(snippet_cleaned)
 
         question_reference = create_question(text=knowledge_list, question_type="factual")
 
