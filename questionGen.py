@@ -110,8 +110,33 @@ def knowledge_to_question(knowledge_path):
         title_list.append(title_cleaned)
         snippet_list.append(snippet_cleaned)
 
-        question_reference = create_question(text=knowledge_list, question_type="factual")
+    question_reference = create_question(text=knowledge_list, question_type="factual")
+    
+    parts = question_reference.split("Reference Answer:")
+
+    question_text = parts[0].replace("Question:", "").strip()
+    
+    split_index = question_text.find("A)")
+
+    question = question_text[:split_index].strip()
+    question_cleaned = question_text.replace("\n", " ")
+
+    abcd_options = question_text[split_index:].strip()
+    abcd_options_cleaned = abcd_options.replace("  ", " ")
+    abcd_options_cleaned = abcd_options.replace("\n", " ")
+
+
+    reference_answer = parts[1].strip()
+
+    question_dict = {
+    "question": question_cleaned,
+    "options": abcd_options_cleaned,
+    "reference_answer": reference_answer
+    }
+
 
 
     with open("question_reference.json", "w", encoding="utf-8") as f:
-        json.dump(question_reference, f, ensure_ascii=False, indent=2)
+        json.dump(question_dict, f, ensure_ascii=False, indent=2)
+
+    return question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
