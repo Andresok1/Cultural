@@ -70,11 +70,11 @@ for query, info in data.items():
     knowledge_output= []
 
     count = 0
-    max_results = 3
+    max_results = 3     #TODO: args to control number of considered documents for knowledge generation
 
-    if single:  
-        for item in results:
-            content = item.get('content')
+    if single:  #'''TODO: se arman grupos de knowldge aca->funcion'''
+        for doc in docs:
+            content = doc.get('content')   #optimizar con knowledger_input y sacar el create_knowledge del if
             if content:     
                 knowledge_output.append(create_knowledge(text=content, culture=culture, dimension=dimension))    ###Knowledge result by each doc
                 count += 1
