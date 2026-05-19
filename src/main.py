@@ -67,11 +67,11 @@ for culture in cultures:
                     "result": result,
                 }   
 
-with open("query_results.json", "w", encoding="utf-8") as f:
+with open("results/query_results.json", "w", encoding="utf-8") as f:
     json.dump(all_results, f, ensure_ascii=False, indent=2)
 
 
-query_results = r"C:\Users\Andres\Repos\Cultural_thesis\query_results.json"
+query_results = r"C:\Users\Andres\Repos\Cultural_thesis\results\query_results.json"
 
 resultados = [] 
 
@@ -128,10 +128,10 @@ for query, info in data.items():
         knowledge_output.append(kl)    ###One knowledge result for all docs
 
 
-    with open(f"knowledge_output_{culture}.json", "w", encoding="utf-8") as f:
+    with open(f"results/knowledge_output_{culture}.json", "w", encoding="utf-8") as f:
         json.dump(knowledge_output, f, ensure_ascii=False, indent=2)
 
-    knowledge_path = rf"C:\Users\Andres\Repos\Cultural_thesis\knowledge_output_{culture}.json"
+    knowledge_path = rf"C:\Users\Andres\Repos\Cultural_thesis\results\knowledge_output_{culture}.json"
 
     question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path)
 
@@ -161,7 +161,7 @@ for query, info in data.items():
 for culture, dfs in culture_dfs.items():
     if dfs:  
         final_df = pd.concat(dfs, ignore_index=True)
-        final_df.to_csv(f"{culture}_Knowledge_QA.csv", sep="\t", index=False, encoding="utf-8")
+        final_df.to_csv(f"results/{culture}_Knowledge_QA.csv", index=False, encoding="utf-8")
     else:
         print(f"Warning: No data to save for culture {culture}")
 
