@@ -4,10 +4,33 @@ from questionGen import knowledge_to_question
 
 import json
 import pandas as pd
+import argparse
 
 
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-single= True   #single knowledge for each doc, else: one knowledge for all docs
+parser.add_argument(
+    "--knowledge_level",
+    choices=["single", "multi"],
+    default="single",
+    help="Each document receibed their own knowledge (single) or all documents are considered together for one knowledge (multi).",
+)
+
+parser.add_argument(
+    "--max_results",
+    type=int,
+    default=3,
+    help="Maximum number of docs to consider for knowledge generation. Just for single-knowledge-level.",
+)
+
+parser.add_argument(
+    "--question_language",
+    choices=["english", "local"],
+    default="english",
+    help="Language in which the question will be generated.",
+)
+
+args = parser.parse_args()
 
 ### Search dimensions and cultures to query creation
 dimensions = [
