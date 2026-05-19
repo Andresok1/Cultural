@@ -2,6 +2,8 @@ from duckDuckGo import fetch_raw_results
 from knowledgeGen import create_knowledge
 
 import json
+import pandas as pd
+
 
 
 single= True   #single knowledge for each doc, else: one knowledge for all docs
