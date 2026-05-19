@@ -56,13 +56,15 @@ print(f"--- Analazing query documents ---")
 with open(query_results, "r", encoding="utf-8") as f:
     data = json.load(f)
 
-
+culture_dfs = {} 
     
 for query, info in data.items():
     dimension = info.get('dimension')
     culture = info.get('culture', [])
-    results = info.get('result', [])
+    docs = info.get('result', [])
 
+    if culture not in culture_dfs:
+        culture_dfs[culture] = []
 
     knowledge_input= []
     knowledge_output= []
