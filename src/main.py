@@ -105,7 +105,7 @@ for query, info in data.items():
         knowledge_output.append(kl)    ###One knowledge result for all docs
 
 
-    with open(f"knowledge_output_{dimension}_{culture}.json", "w", encoding="utf-8") as f:
+    with open(f"knowledge_output_{culture}.json", "w", encoding="utf-8") as f:
         json.dump(knowledge_output, f, ensure_ascii=False, indent=2)
 
 
