@@ -76,15 +76,20 @@ for query, info in data.items():
         for doc in docs:
             content = doc.get('content')   #optimizar con knowledger_input y sacar el create_knowledge del if
             if content:     
-                knowledge_output.append(create_knowledge(text=content, culture=culture, dimension=dimension))    ###Knowledge result by each doc
+                kl= create_knowledge(text=content, culture=culture, dimension=dimension)
+                knowledge_output.append(kl)    ###Knowledge result by each doc
                 count += 1
             
             if count >= max_results:
                 break
+        if count < max_results:
+            print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {max_results})")
+
+
 
     else: 
-        for item in results:
-            content = item.get('content')
+        for doc in docs:
+            content = doc.get('content')
 
             if content:
                 knowledge_input.append({content})
@@ -92,8 +97,12 @@ for query, info in data.items():
 
             if count >= max_results:
                 break
-
-        knowledge_output.append(create_knowledge(text=knowledge_input, culture=culture, dimension=dimension))    ###One knowledge result for all docs
+        if count < max_results:
+            print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {max_results})")
+        
+        kl= create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
+        kl_cleaned = kl.replace(";", ",").strip() 
+        knowledge_output.append(kl)    ###One knowledge result for all docs
 
 
     with open(f"knowledge_output_{dimension}_{culture}.json", "w", encoding="utf-8") as f:
