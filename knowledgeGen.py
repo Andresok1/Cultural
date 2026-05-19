@@ -35,7 +35,7 @@ def create_knowledge(text, culture, dimension):
     - snippet: the original text supporting this feature.
     - Knowledge: a concise summary of the information related to the {dimension} dimension in the {culture} culture, based solely on the provided text.
 
-    If the text **does not contain enough information about the culture**, do not invent anything and say "Not enough information." in all fields.
+    If the text **does not contain enough information about the culture**, do not invent anything and say "Not enough information." in the knowledge field, but fill the title with the dimension and culture and added a (info missing), so it can be tracked.
 
     Texts to analyze:
     {prompt_texts}
