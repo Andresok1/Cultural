@@ -69,16 +69,15 @@ def create_question(text, question_type):
     content = response.choices[0].message.content
     return content
 
-
-if __name__ == "__main__":
-
-
-    knowledge_path = r"C:\Users\Andres\Repos\Cultural_thesis\Exp1_results\RES2_knowledge_output_colombian.json"
-
-    # knowledge_path = r"C:\Users\Andres\Repos\Cultural_thesis\Exp1_results\RES2_knowledge_output_german.json"
+def knowledge_to_question(knowledge_path):
+    '''This function creates questions from knowledge.
+       It gives knowledge_list, title_list and snippet_list scaning the knowledge_path 
+    '''
 
 
     knowledge_list = []
+    title_list = []
+    snippet_list = []
 
     with open(knowledge_path, "r", encoding="utf-8") as f:
         data = json.load(f)
