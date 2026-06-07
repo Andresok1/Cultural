@@ -2,7 +2,9 @@ from openai import OpenAI
 import json
 import os
 from dotenv import load_dotenv
-import os
+
+from questionGen import csv_saver
+
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -12,9 +14,9 @@ client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
 def create_knowledge(text, culture, dimension):
     """
-    Extracts important features and content related to a specific culture
-    from a given text. Returns format: title, original snippet and knowledge extrated from the text.
-    Does not invent information if there is insufficient support.
+    Extracts important features and content related to a specific culture using OpenAI API
+    from a given text. Returns format: title, original snippet and knowledge extrated from
+    the text. Does not invent information if there is insufficient support.
     """
     if isinstance(text, str):
         texts = [text]
@@ -32,7 +34,7 @@ def create_knowledge(text, culture, dimension):
     - title: a short title summarizing the feature.
     - culture": {culture},
     - dimension": {dimension},
-    - snippet: the original text supporting this feature.
+    - snippet: the original text supporting this feature. If there are multiple texts, you put one snippet for each text, separated by //.
     - Knowledge: a concise summary of the information related to the {dimension} dimension in the {culture} culture, based solely on the provided text.
 
     If the text **does not contain enough information about the culture**, do not invent anything and say "Not enough information." in the knowledge field, but fill the title with the dimension and culture and added a (info missing), so it can be tracked.
