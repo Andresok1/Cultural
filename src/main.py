@@ -1,11 +1,13 @@
 from duckDuckGo import fetch_raw_results
-from knowledgeGen import create_knowledge
-from questionGen import knowledge_to_question
+from knowledgeGen import knowledge_level_manager
+from questionGen import csv_saver
 
-import json
 import pandas as pd
+import json
+from pathlib import Path
 import argparse
 
+BASE_DIR = Path(__file__).resolve().parent
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
