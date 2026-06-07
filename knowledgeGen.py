@@ -50,3 +50,75 @@ def create_knowledge(text, culture, dimension):
 
     content = response.choices[0].message.content
     return content
+
+
+def knowledge_level_manager(args, query_results):
+    """
+    It manages between atomic and collective to organize knowledge generation.
+    """
+
+    resultados = [] 
+
+    print(f"--- Analazing query documents ---")
+    with open(query_results, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    culture_dfs = {} 
+    
+    for query, info in data.items():
+        dimension = info.get('dimension')
+        culture = info.get('culture', [])
+        docs = info.get('result', [])
+
+        if culture not in culture_dfs:
+            culture_dfs[culture] = []
+
+        
+        knowledge_output= []
+
+        count = 0
+
+        if args.knowledge_level == "atomic":
+            for doc in docs:
+                content = doc.get('content')   #sacar el create_knowledge del if
+                if content and len(content.strip()) > 300:     
+                    kl= create_knowledge(text=content, culture=culture, dimension=dimension)
+                    knowledge_output.append(kl)   
+                    count += 1
+                
+                if count >= args.max_results:
+                    break
+            if count < args.max_results:
+                print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
+
+        else: #"collective" knowledge level
+            knowledge_input= []
+            for doc in docs:
+                content = doc.get('content')
+
+                if content:
+                    knowledge_input.append({content})
+                    count += 1
+
+                if count >= args.max_results:
+                    break
+                
+            if count < args.max_results:
+                print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
+            
+            kl= create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
+            kl_cleaned = kl.replace(";", ",").strip() 
+            knowledge_output.append(kl)    ###One knowledge result for all docs
+
+
+        with open(f"results/knowledge_output_{culture}.json", "w", encoding="utf-8") as f:
+            json.dump(knowledge_output, f, ensure_ascii=False, indent=2)
+
+
+        knowledge_path = rf"C:\Users\Andres\Repos\Cultural_thesis\results\knowledge_output_{culture}.json"
+
+        csv_saver(args, dimension, culture, culture_dfs, knowledge_path)
+
+
+    return knowledge_output
+
