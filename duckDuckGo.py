@@ -27,7 +27,7 @@ def fetch_page_content(url, max_chars=50000):
 
 def fetch_raw_results(query, num_results=10, fetch_full_content=False, print_on=False):
     """
-    Search with DuckDuckGo and optionally 
+    Search with DuckDuckGo (posiblemente no sea DuckDuckGo sino uno general, usa DDGS) and optionally 
     fetch full content of results. 
     Format: [{{"title": "...", "link": "...", "content": "..."}}, ...]
     """
@@ -58,7 +58,7 @@ def fetch_raw_results(query, num_results=10, fetch_full_content=False, print_on=
                 # print(f"    Content: {content[:500]}...\n") if print_on else None
 
                 raw_bytes = fetch_page_content(link)  # debe devolver bytes
-                if isinstance(raw_bytes, str):  # si fetch_page_content devuelve str, convertir a bytes
+                if isinstance(raw_bytes, str):  #If fetch_page_content returns a str, it converts in bytes.
                     raw_bytes = raw_bytes.encode('utf-8', errors='replace')
                 
                 detected = chardet.detect(raw_bytes)
