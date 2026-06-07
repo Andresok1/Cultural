@@ -156,3 +156,46 @@ def knowledge_to_question(knowledge_path, culture, question_language):
         json.dump(question_dict, f, ensure_ascii=False, indent=2)
 
     return question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
+
+
+
+def csv_saver(args, dimension, culture, culture_dfs, knowledge_path):
+
+    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path, culture, args.question_language)
+
+
+    df_dimension = pd.DataFrame([{"culture": culture, "dimension": dimension}])
+
+
+
+    data_knowledge_info = {}
+    for i, (t, s, k) in enumerate(zip(title_list, snippet_list, knowledge_list), start=1):
+        data_knowledge_info[f"title_{i}"] = [t]
+        data_knowledge_info[f"snippet_{i}"] = [s]
+        data_knowledge_info[f"knowledge_{i}"] = [k]
+
+    df_knowledge_info = pd.DataFrame(data_knowledge_info)
+
+
+
+    df_questions_reference = pd.DataFrame({
+        "question": [question],
+        "abcd_options": [abcd_options],
+        "reference_answer": [reference_answer]
+    })
+
+
+
+    df = pd.concat([df_dimension.reset_index(drop=True),
+                    df_knowledge_info.reset_index(drop=True),
+                    df_questions_reference.reset_index(drop=True)], axis=1)
+
+    culture_dfs[culture].append(df)
+
+
+    for culture, dfs in culture_dfs.items():
+        if dfs:  
+            final_df = pd.concat(dfs, ignore_index=True)
+            final_df.to_csv(f"results/{culture}_Knowledge_QA.csv", index=False, encoding="utf-8-sig")
+        else:
+            print(f"Warning: No data to save for culture {culture}")
