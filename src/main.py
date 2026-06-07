@@ -13,9 +13,9 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 
 parser.add_argument(
     "--knowledge_level",
-    choices=["single", "multi"],
-    default="single",
-    help="Each document receibed their own knowledge (single) or all documents are considered together for one knowledge (multi).",
+    choices=["atomic", "collective"],
+    default="atomic",
+    help="Each document received their own knowledge  (atomic) or all documents are considered together for one knowledge (collective).",
 )
 
 parser.add_argument(
