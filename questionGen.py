@@ -2,7 +2,7 @@ from openai import OpenAI
 import json
 import os
 from dotenv import load_dotenv
-import os
+import pandas as pd
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -64,12 +64,12 @@ def create_question(text, question_type, culture, question_language):
         or characteristics, in order to effectively assess the student’s understanding
         of cultural traits.
         2. A reference answer should be provided after the question.
-        3. Do not change the structure of "Question" and "Reference Answer" in the output, as they will be used for evaluation. Just fill in the content after these labels.
+        3. Do not change the structure of "Question", "Options" and "Reference Answer" in the output, as they will be used for evaluation. Just fill in the content after these labels.
         Context:
         {prompt_texts}
-        Question:
-        Reference Answer:
-
+        Give question and options based on the context provided.
+        (example: Question? A) option 1, B) option 2, C) option 3, D) option 4)
+        Reference Answer: -. 
         """
 
     # return prompt
@@ -84,7 +84,10 @@ def create_question(text, question_type, culture, question_language):
 
 def knowledge_to_question(knowledge_path, culture, question_language):
     '''This function creates questions from knowledge.
-       It gives knowledge_list, title_list and snippet_list scaning the knowledge_path 
+       It gives knowledge_list, title_list and snippet_list scaning the knowledge_path
+
+       return:
+        question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
     '''
 
 
