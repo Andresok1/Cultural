@@ -1,3 +1,5 @@
+import re
+
 from openai import OpenAI
 import json
 import os
@@ -82,14 +84,20 @@ def create_question(text, question_type, culture, question_language):
     content = response.choices[0].message.content
     return content
 
-def knowledge_to_question(knowledge_path, culture, question_language):
+def knowledge_to_question(knowledge_path, culture, dimension, timestamp, question_language):
     '''This function creates questions from knowledge.
        It gives knowledge_list, title_list and snippet_list scaning the knowledge_path
 
        return:
         question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
     '''
+    output_path = f"results/question_reference{timestamp}.json"
 
+    if os.path.exists(output_path):
+        with open(output_path, "r", encoding="utf-8") as f:
+            question_vector = json.load(f)
+    else:
+        question_vector = {}
 
     knowledge_list = []
     title_list = []
@@ -97,13 +105,17 @@ def knowledge_to_question(knowledge_path, culture, question_language):
 
     with open(knowledge_path, "r", encoding="utf-8") as f:
         knowledge_data = json.load(f)
+    
+    knowledge_items = knowledge_data[culture][dimension]
 
-    for knowledge_set in knowledge_data:
+    for knowledge_set in knowledge_items:
 
         if not knowledge_set or not knowledge_set.strip():
             print("Warning: empty knowledge_set, skipping")
             continue
         
+        clean_json = re.sub(r"^```json\s*|\s*```$", "", knowledge_set, flags=re.DOTALL).strip()
+
         try:
             item = json.loads(knowledge_set)  # it converts the string back to a dictionary 
 
@@ -132,37 +144,48 @@ def knowledge_to_question(knowledge_path, culture, question_language):
 
     question_text = parts[0].replace("Question:", "").strip()
     
-    split_index = question_text.find("A)") or question_text.find("a)")
+    split_index = question_text.find("A)")
+    if split_index == -1:
+        split_index = question_text.find("a)")
 
     question = question_text[:split_index].strip()
     question_cleaned = question.replace("\n", " ")
 
     abcd_options = question_text[split_index:].strip()
-    abcd_options_cleaned = abcd_options.replace("  ", " ")
-    abcd_options_cleaned = abcd_options.replace("\n", " ")
-
+    # abcd_options_cleaned = abcd_options.replace("  ", " ")
+    # abcd_options_cleaned = abcd_options.replace("\n", " ")
+    abcd_options_cleaned = abcd_options.replace("\n", " ").replace("  ", " ")
 
     reference_answer = parts[1].strip()
 
-    question_dict = {
-    "question": question_cleaned,
-    "options": abcd_options_cleaned,
-    "reference_answer": reference_answer
+    if culture not in question_vector:
+        question_vector[culture] = {}
+
+    question_vector[culture][dimension] = {
+        "question": question_cleaned,
+        "options": abcd_options_cleaned,
+        "reference_answer": reference_answer
     }
 
 
-
-    with open("results/question_reference.json", "w", encoding="utf-8") as f:
-        json.dump(question_dict, f, ensure_ascii=False, indent=2)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(question_vector, f, ensure_ascii=False, indent=2)
 
     return question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
 
 
 
-def csv_saver(args, dimension, culture, culture_dfs, knowledge_path):
+def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path):
 
-    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path, culture, args.question_language)
+    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path, culture, dimension, timestamp, args.question_language)
 
+    output_path = f"results/knowledge_output_{timestamp}.json"
+
+    if os.path.exists(output_path):
+        with open(output_path, "r", encoding="utf-8") as f:
+            knowledge_vector = json.load(f)
+    else:
+        knowledge_vector = {}
 
     df_dimension = pd.DataFrame([{"culture": culture, "dimension": dimension}])
 
@@ -176,6 +199,15 @@ def csv_saver(args, dimension, culture, culture_dfs, knowledge_path):
 
     df_knowledge_info = pd.DataFrame(data_knowledge_info)
 
+    if culture not in knowledge_vector:
+        knowledge_vector[culture] = {}
+
+    knowledge_vector[culture][dimension] = {
+        "data": data_knowledge_info
+    }
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(knowledge_vector, f, ensure_ascii=False, indent=2)
 
 
     df_questions_reference = pd.DataFrame({
