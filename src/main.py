@@ -1,11 +1,13 @@
 from duckDuckGo import fetch_raw_results
 from knowledgeGen import knowledge_level_manager
-from questionGen import csv_saver
+from pathlib import Path
+
 
 import pandas as pd
 import json
-from pathlib import Path
 import argparse
+import random
+
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -38,9 +40,10 @@ csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
 df = pd.read_csv(csv_path)
 dimensions = df["Fine-grained Dimension"].tolist()
 
-import random
-dimensions= random.sample(dimensions, 4)
+dimensions= random.sample(dimensions, 2)
 
+timestamp = datetime.now().strftime("%m%d_%H%M")
+    
 cultures= [
     "Colombian",
     # "German",
@@ -55,6 +58,7 @@ for culture in cultures:
         query = f"{dimension} in {culture} culture"
 
         ranking = fetch_raw_results(query, fetch_full_content=True)
+        
 
         all_results[query] ={
 
@@ -66,8 +70,9 @@ for culture in cultures:
 with open("results/query_results.json", "w", encoding="utf-8") as f:
     json.dump(all_results, f, ensure_ascii=False, indent=2)
 
-
 query_results = r"C:\Users\Andres\Repos\Cultural_thesis\results\query_results.json"
 
-knowledge_output= knowledge_level_manager(args, query_results)
+knowledge_output= knowledge_level_manager(args, timestamp, query_results)
+
+print("All Done!")
 
