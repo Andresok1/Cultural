@@ -1,9 +1,11 @@
-from openai import OpenAI
 import json
 import os
-from dotenv import load_dotenv
+import re
 
+from dotenv import load_dotenv
+from openai import OpenAI
 from questionGen import csv_saver
+from interwebAPI import interweb_knowledge_prompting
 
 
 load_dotenv()
@@ -52,7 +54,7 @@ def create_knowledge(text, culture, dimension):
     return content
 
 
-def knowledge_level_manager(args, query_results):
+def knowledge_level_manager(args, timestamp, query_results):
     """
     It manages between atomic and collective to organize knowledge generation.
     """
@@ -73,17 +75,41 @@ def knowledge_level_manager(args, query_results):
         if culture not in culture_dfs:
             culture_dfs[culture] = []
 
-        
-        knowledge_output= []
+        output_path = f"results/knowledge_output.json"
+        input_path = f"results/knowledge_input.json"
 
+        if os.path.exists(output_path):
+            try:
+                with open(output_path, "r", encoding="utf-8") as f:
+                    knowledge_dict = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Warning: {output_path} is invalid JSON. Reinitializing.")
+                knowledge_dict = {}
+        else:
+            knowledge_dict = {}
+
+        if os.path.exists(input_path):
+            try:
+                with open(input_path, "r", encoding="utf-8") as f:
+                    knowledge_input_dict = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Warning: {input_path} is invalid JSON. Reinitializing.")
+                knowledge_input_dict = {}
+        else:
+            knowledge_input_dict = {}
+
+        knowledge_output= []
+        knowledge_input= []
         count = 0
 
         if args.knowledge_level == "atomic":
             for doc in docs:
                 content = doc.get('content')   #sacar el create_knowledge del if
-                if content and len(content.strip()) > 300:     
-                    kl= create_knowledge(text=content, culture=culture, dimension=dimension)
-                    knowledge_output.append(kl)   
+                if content and len(content.strip()) > 300:
+                    knowledge_input.append(content) 
+                    # knowledge_text= create_knowledge(text=content, culture=culture, dimension=dimension)
+                    knowledge_text = interweb_knowledge_prompting(text=content, culture=culture, dimension=dimension)
+                    knowledge_output.append(knowledge_text)   
                     count += 1
                 
                 if count >= args.max_results:
@@ -92,12 +118,11 @@ def knowledge_level_manager(args, query_results):
                 print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
 
         else: #"collective" knowledge level
-            knowledge_input= []
             for doc in docs:
                 content = doc.get('content')
 
                 if content:
-                    knowledge_input.append({content})
+                    knowledge_input.append(content)
                     count += 1
 
                 if count >= args.max_results:
@@ -106,18 +131,38 @@ def knowledge_level_manager(args, query_results):
             if count < args.max_results:
                 print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
             
-            kl= create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
-            kl_cleaned = kl.replace(";", ",").strip() 
-            knowledge_output.append(kl)    ###One knowledge result for all docs
+            # knowledge_text= create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
+            knowledge_text = interweb_knowledge_prompting(text=knowledge_input, culture=culture, dimension=dimension)
+            knowledge_text_cleaned = re.sub(
+                r"^```json\s*|\s*```$",  # quitar ```json al inicio y ``` al final
+                "",
+                knowledge_text,
+                flags=re.DOTALL
+            ).replace(";", ",").strip()
+
+            knowledge_output.append(knowledge_text_cleaned)    ###One knowledge result for all docs
+
+        if culture not in knowledge_dict:
+            knowledge_dict[culture] = {}
+
+        if culture not in knowledge_input_dict:
+            knowledge_input_dict[culture] = {}
+
+        knowledge_dict[culture][dimension] = knowledge_output   
+
+        knowledge_input_dict[culture][dimension] = knowledge_input 
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(knowledge_dict, f, ensure_ascii=False, indent=2)
+
+        
+        with open(input_path, "w", encoding="utf-8") as f:
+            json.dump(knowledge_input_dict, f, ensure_ascii=False, indent=2)
 
 
-        with open(f"results/knowledge_output_{culture}.json", "w", encoding="utf-8") as f:
-            json.dump(knowledge_output, f, ensure_ascii=False, indent=2)
+        # knowledge_path = rf"C:\Users\Andres\Repos\Cultural_thesis\results\knowledge_output_{culture}.json"
 
-
-        knowledge_path = rf"C:\Users\Andres\Repos\Cultural_thesis\results\knowledge_output_{culture}.json"
-
-        csv_saver(args, dimension, culture, culture_dfs, knowledge_path)
+        csv_saver(args, dimension, culture, timestamp, culture_dfs, output_path)
 
 
     return knowledge_output
