@@ -26,7 +26,7 @@ def fetch_page_content(url, max_chars=50000):
         return f"Could not fetch content: {e}"
 
 
-def fetch_raw_results(query, num_results=10, fetch_full_content=False, print_on=False):
+def fetch_raw_results(query, num_results=10, print_on=False):
     """
     Search with DuckDuckGo (posiblemente no sea DuckDuckGo sino uno general, usa DDGS) and optionally 
     fetch full content of results. 
