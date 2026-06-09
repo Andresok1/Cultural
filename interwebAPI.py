@@ -26,10 +26,24 @@ def interweb_knowledge_prompting(text, culture, dimension):
     - title: a short title summarizing the feature.
     - culture": {culture},
     - dimension": {dimension},
-    - snippet: the original text supporting this feature. If there are multiple texts, you put one snippet for each text, separated by //.
+    - snippet: the original text supporting this dimension. If there are multiple texts, you put one snippet for each text, separated by //.
     - Knowledge: a concise summary of the information related to the {dimension} dimension in the {culture} culture, based solely on the provided text.
 
-    If the text **does not contain enough information about the culture**, do not invent anything and say "Not enough information." in the knowledge field, but fill the title with the dimension and culture and added a (info missing), so it can be tracked. Also say why you decide to write "not enought information"
+    Important decision rule:
+
+    If the provided text contains direct or indirect evidence about the dimension "{dimension}" in the culture "{culture}", then you must write a knowledge summary based on that evidence.
+
+    Do not require deep cultural interpretation, historical explanation, or broad social context. A concrete behavioral description is enough.
+
+    Only write "Not enough information." in the knowledge field if the text does not mention the dimension, does not describe the behavior, or does not allow any reasonable conclusion about "{dimension}" in "{culture}"
+
+    If you write "Not enough information.", the title must be:
+    "{dimension} - {culture} (info missing)"
+
+    In that case, also explain briefly in the knowledge field why the text was insufficient.
+
+    Do not invent information.
+    Do not use information outside the provided text.
 
     """
 
