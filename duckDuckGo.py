@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from ddgs import DDGS
+from ddgs.exceptions import DDGSException
 import chardet
 from charset_normalizer import from_bytes
 
@@ -36,10 +37,36 @@ def fetch_raw_results(query, num_results=10, fetch_full_content=False, print_on=
 
     print(f"--- Search Results for: {query} ---")
 
-    with DDGS() as ddgs:    #Searcher context manager, using query and #Results
-        results = list(ddgs.text(query, max_results=num_results)) 
+    backends = ["google", "bing", "duckduckgo", "brave", "yahoo"] 
 
-    print(f"--- Total results returned: {len(results)} ---\n")
+    results_original = []
+
+    for backend in backends:
+        try:
+            with DDGS() as ddgs:    #Searcher context manager, using query and #Results
+                raw_results  = list(ddgs.text(
+                    query, 
+                    backend= backend,
+                    max_results = num_results
+                )) 
+            print(f"results using {backend} backend:{len(raw_results)}")
+
+            results_original.extend(raw_results)
+
+        except DDGSException as e:
+            print(f"results using {backend} backend: 0")
+
+    unique_results = {item['href']: item for item in results_original}.values()
+
+    eliminated = len(results_original) - len(unique_results)
+    print("---\n")
+    print(f"repeated results eliminated: {eliminated}")
+    results = list(unique_results)
+    
+    
+    print(f"--- Total results retrieved: {len(results)} ---\n")
+
+
 
     for i, item in enumerate(results, 1):
         try:
