@@ -46,6 +46,12 @@ dimensions = df["Fine-grained Dimension"].tolist()
 dimensions= random.sample(dimensions, 2)
 
 timestamp = datetime.now().strftime("%m%d_%H%M")
+
+
+results_folder = BASE_DIR.parent / "results" 
+for file_path in glob.glob(os.path.join(results_folder, "*")):
+    if os.path.isfile(file_path):
+        os.remove(file_path)
     
 cultures= [
     "Colombian",
