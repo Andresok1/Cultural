@@ -77,44 +77,41 @@ def fetch_raw_results(query, num_results=10, print_on=False):
             print(f"[{i}] Title: {title}") if print_on else None
             print(f"    Link:  {link}", flush=True) if print_on else None
 
-            if fetch_full_content:
-                print(f"    Fetching content...", end=" ", flush=True) if print_on else None
-                # content = fetch_page_content(link)
-                # content_cleaned = content.replace("\n", " ").strip()
-                # print("Done!") if print_on else None
-                # print(f"    Content: {content[:500]}...\n") if print_on else None
+            print(f"    Fetching content...", end=" ", flush=True) if print_on else None
+ 
 
-                raw_bytes = fetch_page_content(link)  # debe devolver bytes
-                if isinstance(raw_bytes, str):  #If fetch_page_content returns a str, it converts in bytes.
-                    raw_bytes = raw_bytes.encode('utf-8', errors='replace')
-                
-                detected = chardet.detect(raw_bytes)
-                # detected = from_bytes(raw_bytes)[0].encoding
-                encoding = detected['encoding'] if detected['encoding'] else 'utf-8'
-                content = raw_bytes.decode(encoding, errors="replace")  # reemplaza caracteres inválidos
+            raw_bytes = fetch_page_content(link)  # It reads url and returns content in bytes.
+            if isinstance(raw_bytes, str):  #If fetch_page_content returns a str, it converts in bytes.
+                raw_bytes = raw_bytes.encode('utf-8', errors='replace')
+            
+            detected = chardet.detect(raw_bytes)
+            encoding = detected['encoding'] if detected['encoding'] else 'utf-8'
+            content = raw_bytes.decode(encoding, errors="replace")  # reemplaza caracteres inválidos
 
-                content_cleaned = content.replace("\n", " ").strip()
-                
-                print("Done!") if print_on else None
-                print(f"    Content: {content_cleaned[:500]}...\n") if print_on else None
+            content_cleaned = content.replace("\n", " ").strip()
+            # print(f"Length of content: {len(content_cleaned.split())}")
+            
+            print("Done!") if print_on else None
+            print(f"    Content: {content_cleaned[:500]}...\n") if print_on else None
+
+            if len(content_cleaned.split()) > 300:
+
+                i_ranking= len(context)+1 if context else 1
 
                 context.append({
-                    "position:":i,
+                    "position:":i_ranking,
                     "title": title,
                     "link": link,
                     "content": content_cleaned
                 })
-            else:
-                print(f"    Snippet: {snippet}\n") if print_on else None
-                context.append({
-                    "title": title,
-                    "link": link,
-                    "content": snippet
-                })
+
+            # print("Size of ranking:", len(context))
 
         except Exception as e:
             print(f"    Error processing result: {e}\n")
-
+    
+    print("Final ranking size:", len(context))
     print("=== Finished processing all results ===")
+
     return context
 
