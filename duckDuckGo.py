@@ -70,9 +70,9 @@ def fetch_raw_results(query, num_results=10, print_on=False):
 
     for i, item in enumerate(results, 1):
         try:
-            title = item.get('title', 'No title found')
-            link = item.get('href', '') #get the URL of result  
-            snippet = item.get('body', '')
+            title = item.get('title', 'Error: No title found')
+            link = item.get('href', 'Error: No link found') #get the URL of result  
+            snippet = item.get('body', 'Error: No snippet found')
 
             print(f"[{i}] Title: {title}") if print_on else None
             print(f"    Link:  {link}", flush=True) if print_on else None
