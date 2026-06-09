@@ -66,7 +66,7 @@ for culture in cultures:
 
         query = f"{dimension} in {culture} culture"
 
-        ranking = fetch_raw_results(query, fetch_full_content=True)
+        ranking = fetch_raw_results(query)
         
 
         all_results[query] ={
