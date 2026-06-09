@@ -40,10 +40,14 @@ parser.add_argument(
 args = parser.parse_args()
 
 csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
-df = pd.read_csv(csv_path)
-dimensions = df["Fine-grained Dimension"].tolist()
+# df = pd.read_csv(csv_path)
+# dimensions = df["Fine-grained Dimension"].tolist()
 
-dimensions= random.sample(dimensions, 2)
+# dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
+dimensions= [
+    "tax & accounting",
+    "measurement system",
+]
 
 timestamp = datetime.now().strftime("%m%d_%H%M")
 
