@@ -123,7 +123,7 @@ def knowledge_to_question(knowledge_path, culture, dimension, timestamp, questio
             print(f"Warning: invalid JSON, skipping: {knowledge_set[:50]}...")
             continue
 
-        print(f"Processing knowledge item: {item['title']}")  # Debug print to check the content of each item
+        print(f"Processing knowledge item: {dimension} in {culture}") 
         
         know = item.get('Knowledge') or item.get('knowledge')
         know_cleaned = know.replace(";", ",").strip()
