@@ -14,7 +14,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # API key initialization
 client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
-def create_knowledge(text, culture, dimension):
+def OpenAI_create_knowledge(text, culture, dimension):
     """
     Extracts important features and content related to a specific culture using OpenAI API
     from a given text. Returns format: title, original snippet and knowledge extrated from
