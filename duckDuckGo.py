@@ -71,6 +71,7 @@ def fetch_raw_results(query, num_results=10, print_on=False):
     print(f"--- Total results retrieved: {len(results)} ---")
 
 
+    too_short  = 0
 
     for i, item in enumerate(results, 1):
         try:
@@ -108,8 +109,8 @@ def fetch_raw_results(query, num_results=10, print_on=False):
                     "backend": backend,
                     "content": content_cleaned
                 })
-
-            # print("Size of ranking:", len(context))
+            else: 
+                too_short += 1
 
         except Exception as e:
             print(f"    Error processing result: {e}\n")
