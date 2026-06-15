@@ -85,7 +85,7 @@ with open("results/query_results.json", "w", encoding="utf-8") as f:
 
 query_results = r"C:\Users\Andres\Repos\Cultural_thesis\results\query_results.json"
 
-knowledge_output= knowledge_level_manager(args, timestamp, query_results)
+knowledge_output= knowledge_level_manager(args, timestamp, all_results)
 
 print("All Done!")
 
