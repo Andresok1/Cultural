@@ -91,7 +91,8 @@ def knowledge_to_question(knowledge_path, culture, dimension, timestamp, questio
        return:
         question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
     '''
-    output_path = f"results/question_reference{timestamp}.json"
+    output_path = f"results/question_reference_{timestamp}.json"
+    
 
     if os.path.exists(output_path):
         with open(output_path, "r", encoding="utf-8") as f:
@@ -107,6 +108,8 @@ def knowledge_to_question(knowledge_path, culture, dimension, timestamp, questio
         knowledge_data = json.load(f)
     
     knowledge_items = knowledge_data[culture][dimension]
+
+    notEnoughInfo_dimension = []
 
     for knowledge_set in knowledge_items:
 
@@ -134,9 +137,15 @@ def knowledge_to_question(knowledge_path, culture, dimension, timestamp, questio
         snipp = item.get('Snippet') or item.get('snippet')
         snippet_cleaned = snipp.replace(";", ",").strip()
 
-        knowledge_list.append(know_cleaned)
-        title_list.append(title_cleaned)
-        snippet_list.append(snippet_cleaned)
+        if "(info missing)" in title_cleaned:
+            notEnoughInfo_dimension.append(f"{dimension} in {culture}")
+        else:
+            knowledge_list.append(know_cleaned)
+            title_list.append(title_cleaned)
+            snippet_list.append(snippet_cleaned)
+            
+    if notEnoughInfo_dimension is not None:
+        print("notEnoughInfo_dimension:", notEnoughInfo_dimension)
 
     question_reference = create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=question_language)
     
