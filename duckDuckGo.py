@@ -41,6 +41,8 @@ def fetch_raw_results(query, num_results=10, print_on=False):
 
     results_original = []
 
+    print(f"Results using:")
+
     for backend in backends:
         try:
             with DDGS() as ddgs:    #Searcher context manager, using query and #Results
@@ -49,22 +51,24 @@ def fetch_raw_results(query, num_results=10, print_on=False):
                     backend= backend,
                     max_results = num_results
                 )) 
-            print(f"results using {backend} backend:{len(raw_results)}")
+            print(f"    {backend} backend:{len(raw_results)}")
 
             results_original.extend(raw_results)
 
+            for r in raw_results:
+                r["backend"] = backend
+
         except DDGSException as e:
-            print(f"results using {backend} backend: 0")
+            print(f"    {backend} backend: 0")
 
     unique_results = {item['href']: item for item in results_original}.values()
 
     eliminated = len(results_original) - len(unique_results)
-    print("---\n")
-    print(f"repeated results eliminated: {eliminated}")
+    print(f"    Repeated results eliminated: {eliminated}")
     results = list(unique_results)
     
     
-    print(f"--- Total results retrieved: {len(results)} ---\n")
+    print(f"--- Total results retrieved: {len(results)} ---")
 
 
 
@@ -72,7 +76,7 @@ def fetch_raw_results(query, num_results=10, print_on=False):
         try:
             title = item.get('title', 'Error: No title found')
             link = item.get('href', 'Error: No link found') #get the URL of result  
-            snippet = item.get('body', 'Error: No snippet found')
+            backend = item.get('backend', 'Error: No backend found')
 
             print(f"[{i}] Title: {title}") if print_on else None
             print(f"    Link:  {link}", flush=True) if print_on else None
@@ -86,22 +90,22 @@ def fetch_raw_results(query, num_results=10, print_on=False):
             
             detected = chardet.detect(raw_bytes)
             encoding = detected['encoding'] if detected['encoding'] else 'utf-8'
-            content = raw_bytes.decode(encoding, errors="replace")  # reemplaza caracteres inválidos
+            content = raw_bytes.decode(encoding, errors="replace")  # replace invalid characters with a placeholder
 
             content_cleaned = content.replace("\n", " ").strip()
-            # print(f"Length of content: {len(content_cleaned.split())}")
             
             print("Done!") if print_on else None
             print(f"    Content: {content_cleaned[:500]}...\n") if print_on else None
 
             if len(content_cleaned.split()) > 300:
 
-                i_ranking= len(context)+1 if context else 1
+                i_ranking= len(context)+1 if context else 1     #ranking position based on current context size, starting at 1. Context starts empty.
 
                 context.append({
-                    "position:":i_ranking,
+                    "position":i_ranking,
                     "title": title,
                     "link": link,
+                    "backend": backend,
                     "content": content_cleaned
                 })
 
@@ -109,9 +113,12 @@ def fetch_raw_results(query, num_results=10, print_on=False):
 
         except Exception as e:
             print(f"    Error processing result: {e}\n")
-    
+
+    print("Docs with few content words:", too_short)
     print("Final ranking size:", len(context))
     print("=== Finished processing all results ===")
+    print("\n")
+
 
     return context
 
