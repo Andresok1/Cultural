@@ -61,13 +61,13 @@ def knowledge_level_manager(args, timestamp, query_results):
 
     resultados = [] 
 
-    print(f"--- Analazing query documents ---")
-    with open(query_results, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    # print(f"--- Analazing query documents ---")
+    # with open(query_results, "r", encoding="utf-8") as f:
+    #     data = json.load(f)
 
     culture_dfs = {} 
     
-    for query, info in data.items():
+    for query, info in query_results.items():
         dimension = info.get('dimension')
         culture = info.get('culture', [])
         docs = info.get('result', [])
@@ -78,7 +78,7 @@ def knowledge_level_manager(args, timestamp, query_results):
         output_path = f"results/knowledge_output.json"
         input_path = f"results/knowledge_input.json"
 
-        if os.path.exists(output_path):
+        if os.path.exists(output_path): #Update for knowledge_output
             try:
                 with open(output_path, "r", encoding="utf-8") as f:
                     knowledge_dict = json.load(f)
@@ -88,7 +88,7 @@ def knowledge_level_manager(args, timestamp, query_results):
         else:
             knowledge_dict = {}
 
-        if os.path.exists(input_path):
+        if os.path.exists(input_path):  #Update for knowledge_input
             try:
                 with open(input_path, "r", encoding="utf-8") as f:
                     knowledge_input_dict = json.load(f)
@@ -104,13 +104,15 @@ def knowledge_level_manager(args, timestamp, query_results):
 
         if args.knowledge_level == "atomic":
             for doc in docs:
-                content = doc.get('content')   #sacar el create_knowledge del if
+                content = doc.get('content')
                 if content and len(content.strip()) > 300:
                     knowledge_input.append(content) 
-                    # knowledge_text= create_knowledge(text=content, culture=culture, dimension=dimension)
-                    knowledge_text = interweb_knowledge_prompting(text=content, culture=culture, dimension=dimension)
+                    knowledge_text= OpenAI_create_knowledge(text=content, culture=culture, dimension=dimension)
+                    # knowledge_text = interweb_knowledge_prompting(text=content, culture=culture, dimension=dimension)
                     knowledge_output.append(knowledge_text)   
                     count += 1
+                else: 
+                    print(f"{query}'-> (less than 300 characters).")
                 
                 if count >= args.max_results:
                     break
@@ -121,9 +123,11 @@ def knowledge_level_manager(args, timestamp, query_results):
             for doc in docs:
                 content = doc.get('content')
 
-                if content:
+                if content and len(content.strip()) > 300:
                     knowledge_input.append(content)
                     count += 1
+                else: 
+                    print(f"{query}'-> (less than 300 characters).")
 
                 if count >= args.max_results:
                     break
@@ -131,8 +135,12 @@ def knowledge_level_manager(args, timestamp, query_results):
             if count < args.max_results:
                 print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
             
-            # knowledge_text= create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
-            knowledge_text = interweb_knowledge_prompting(text=knowledge_input, culture=culture, dimension=dimension)
+            knowledge_text= OpenAI_create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
+            # knowledge_text = interweb_knowledge_prompting(text=knowledge_input, culture=culture, dimension=dimension)
+
+            if knowledge_text is None:
+                knowledge_text = ""
+
             knowledge_text_cleaned = re.sub(
                 r"^```json\s*|\s*```$",  # quitar ```json al inicio y ``` al final
                 "",
@@ -152,11 +160,11 @@ def knowledge_level_manager(args, timestamp, query_results):
 
         knowledge_input_dict[culture][dimension] = knowledge_input 
 
-        with open(output_path, "w", encoding="utf-8") as f:
+        with open(output_path, "w", encoding="utf-8") as f:     #Save knowledge_output
             json.dump(knowledge_dict, f, ensure_ascii=False, indent=2)
 
         
-        with open(input_path, "w", encoding="utf-8") as f:
+        with open(input_path, "w", encoding="utf-8") as f:      #Save knowledge_input
             json.dump(knowledge_input_dict, f, ensure_ascii=False, indent=2)
 
 
