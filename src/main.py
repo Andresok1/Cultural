@@ -58,9 +58,9 @@ for file_path in glob.glob(os.path.join(results_folder, "*")):
         os.remove(file_path)
     
 cultures= [
-    "Colombian",
+    "Colombia",
     # "German",
-    "Italian",
+    "Italy",
 ]
 
 all_results = {}
@@ -68,7 +68,7 @@ all_results = {}
 for culture in cultures:
     for dimension in dimensions:
 
-        query = f"{dimension} in {culture} culture"
+        query = f"{dimension} in {culture}"
 
         ranking = fetch_raw_results(query)
         
