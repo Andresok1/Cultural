@@ -61,16 +61,13 @@ def knowledge_level_manager(args, timestamp, query_results):
 
     resultados = [] 
 
-    # print(f"--- Analazing query documents ---")
-    # with open(query_results, "r", encoding="utf-8") as f:
-    #     data = json.load(f)
 
     culture_dfs = {} 
     
-    for query, info in query_results.items():
-        dimension = info.get('dimension')
+    for key, info in query_results.items():
         culture = info.get('culture', [])
-        docs = info.get('result', [])
+        dimension = info.get('dimension')
+        languages  = info.get('languages', [])
 
         if culture not in culture_dfs:
             culture_dfs[culture] = []
@@ -81,12 +78,12 @@ def knowledge_level_manager(args, timestamp, query_results):
         if os.path.exists(output_path): #Update for knowledge_output
             try:
                 with open(output_path, "r", encoding="utf-8") as f:
-                    knowledge_dict = json.load(f)
+                    knowledge_output_dict = json.load(f)
             except json.JSONDecodeError:
                 print(f"Warning: {output_path} is invalid JSON. Reinitializing.")
-                knowledge_dict = {}
+                knowledge_output_dict = {}
         else:
-            knowledge_dict = {}
+            knowledge_output_dict = {}     #Structure in Knowledge_output.json
 
         if os.path.exists(input_path):  #Update for knowledge_input
             try:
@@ -98,45 +95,71 @@ def knowledge_level_manager(args, timestamp, query_results):
         else:
             knowledge_input_dict = {}
 
-        knowledge_output= []
+        knowledge_output= []    #For each Query
         knowledge_input= []
+        
         count = 0
-
+        
         if args.knowledge_level == "atomic":
-            for doc in docs:
-                content = doc.get('content')
-                if content and len(content.strip()) > 300:
-                    knowledge_input.append(content) 
-                    knowledge_text= OpenAI_create_knowledge(text=content, culture=culture, dimension=dimension)
-                    # knowledge_text = interweb_knowledge_prompting(text=content, culture=culture, dimension=dimension)
-                    knowledge_output.append(knowledge_text)   
-                    count += 1
-                else: 
-                    print(f"{query}'-> (less than 300 characters).")
+            for lang, data in languages.items():
+                query_by_language = data.get("query", [])
+                ranking = data.get("ranking", [])
                 
-                if count >= args.max_results:
-                    break
+                count_by_language = 0
+
+                for content in ranking:
+                    if content:
+                        knowledge_input.append(content) 
+                        if args.api == "openai":
+                            knowledge_text= OpenAI_create_knowledge(text=content, culture=culture, dimension=dimension)
+                        else:
+                            knowledge_text = interweb_knowledge_prompting(text=content, culture=culture, dimension=dimension)#
+                            #IF here it says something about (info missing) it should look for more docs
+
+                        knowledge_output.append(knowledge_text)   
+                        count_by_language += 1
+
+                    if count_by_language == 3:
+                        break
+
+
+                print(f"For key {key} in {lang}:")
+                print(f"you got: {count_by_language} documents")
+
+                count += count_by_language
+            
+            print(f"After all languages the total Counter for {key} is now: {count}")
+
             if count < args.max_results:
-                print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
+                print(f"DOCS MISSING {count}/{args.max_results}")
 
         else: #"collective" knowledge level
-            for doc in docs:
-                content = doc.get('content')
+            for lang, data in languages.items():
+                query_by_language = data.get("query", [])
+                ranking = data.get("ranking", [])
 
-                if content and len(content.strip()) > 300:
-                    knowledge_input.append(content)
-                    count += 1
-                else: 
-                    print(f"{query}'-> (less than 300 characters).")
+                count_by_language = 0
 
-                if count >= args.max_results:
-                    break
+                for content in ranking:
+                    if content:
+                        knowledge_input.append(content) #Accumulation of Knowlege input for collective analysis. 
+                        count_by_language += 1
+
+                    if count_by_language == 3:
+                        break
                 
+                print(f"For key {key} in {lang}:")
+                print(f"you got: {count_by_language}documents")
+
+                count += count_by_language
+
             if count < args.max_results:
-                print(f"Warning: Only {count} results with content found for query '{query}' (less than the max of {args.max_results})")
-            
-            knowledge_text= OpenAI_create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
-            # knowledge_text = interweb_knowledge_prompting(text=knowledge_input, culture=culture, dimension=dimension)
+               print(f"DOCS MISSING {count}/{args.max_results}")
+
+            if args.api == "openai":
+                knowledge_text= OpenAI_create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
+            else:
+                knowledge_text = interweb_knowledge_prompting(text=knowledge_input, culture=culture, dimension=dimension)
 
             if knowledge_text is None:
                 knowledge_text = ""
@@ -150,25 +173,21 @@ def knowledge_level_manager(args, timestamp, query_results):
 
             knowledge_output.append(knowledge_text_cleaned)    ###One knowledge result for all docs
 
-        if culture not in knowledge_dict:
-            knowledge_dict[culture] = {}
+        if culture not in knowledge_output_dict:
+            knowledge_output_dict[culture] = {}
 
         if culture not in knowledge_input_dict:
             knowledge_input_dict[culture] = {}
 
-        knowledge_dict[culture][dimension] = knowledge_output   
+        knowledge_output_dict[culture][dimension] = knowledge_output   
 
         knowledge_input_dict[culture][dimension] = knowledge_input 
 
         with open(output_path, "w", encoding="utf-8") as f:     #Save knowledge_output
-            json.dump(knowledge_dict, f, ensure_ascii=False, indent=2)
+            json.dump(knowledge_output_dict, f, ensure_ascii=False, indent=2)
 
-        
         with open(input_path, "w", encoding="utf-8") as f:      #Save knowledge_input
             json.dump(knowledge_input_dict, f, ensure_ascii=False, indent=2)
-
-
-        # knowledge_path = rf"C:\Users\Andres\Repos\Cultural_thesis\results\knowledge_output_{culture}.json"
 
         csv_saver(args, dimension, culture, timestamp, culture_dfs, output_path)
 
