@@ -46,7 +46,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
+# csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
 # df = pd.read_csv(csv_path)
 # dimensions = df["Fine-grained Dimension"].tolist()
 
