@@ -6,11 +6,7 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# API key initialization
-client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
 def create_question(text, question_type, culture, question_language):
     """
@@ -75,6 +71,9 @@ def create_question(text, question_type, culture, question_language):
         """
 
     # return prompt
+    load_dotenv()
+
+    client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
