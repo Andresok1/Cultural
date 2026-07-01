@@ -101,15 +101,8 @@ def fetch_raw_results(query,key, num_results=10, print_on=False):
 
             if len(content_cleaned.split()) > 300:
 
-                i_ranking= len(context)+1 if context else 1     #ranking position based on current context size, starting at 1. Context starts empty.
+                context.append(content_cleaned)
 
-                context.append({
-                    "position":i_ranking,
-                    "title": title,
-                    "link": link,
-                    "backend": backend,
-                    "content": content_cleaned
-                })
             else: 
                 too_short += 1
 
