@@ -1,5 +1,7 @@
 import requests
 import json
+import pandas as pd
+
 
 def interweb_knowledge_prompting(text, culture, dimension):
 
@@ -44,11 +46,11 @@ def interweb_knowledge_prompting(text, culture, dimension):
 
     Do not invent information.
     Do not use information outside the provided text.
-
+    Just create one Knowledge text.
     """
 
     payload = {
-        "model": "gpt-4o-mini",  # Replace with the model available in your API
+        "model": "gpt-4o-mini",  # Replace with the model available in your API. gpt-4o-mini
         "messages": [
             {
                 "role": "system",
