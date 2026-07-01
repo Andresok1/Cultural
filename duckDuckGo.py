@@ -51,7 +51,8 @@ def fetch_raw_results(query,key, num_results=10, print_on=False):
                     backend= backend,
                     max_results = num_results
                 )) 
-            print(f"    {backend} backend:{len(raw_results)}")
+            if raw_results is not None:
+                print(f"    {backend} backend:{len(raw_results)}")
 
             results_original.extend(raw_results)
 
