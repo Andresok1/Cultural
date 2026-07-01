@@ -37,6 +37,13 @@ parser.add_argument(
     help="Language in which the question will be generated.",
 )
 
+parser.add_argument(
+    "--api",
+    choices=["openai", "interweb"],
+    default="interweb",
+    help="API which is going to be used for knowledge and questions creation",
+)
+
 args = parser.parse_args()
 
 csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
