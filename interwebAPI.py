@@ -117,3 +117,38 @@ def interweb_knowledge_prompting(text, culture, dimension):
 
 
 # interweb_knowledge_prompting(doc, "Colombian", "names examples ")
+
+
+def interweb_model_list():
+    API_KEY = "yMbyBst2N4RBPIY8UJAxMFBdzUiaLM1bBoskkitspjxmszNcva8IkKb8tO0OHI0C"
+    url = "https://interweb.l3s.uni-hannover.de"
+
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+    }
+
+    response = requests.get(
+        f"{url}/models",
+        headers=headers,
+        timeout=60
+    )
+
+    response.raise_for_status()
+    models = response.json()
+
+    df = models_to_table(models)
+    df.to_csv("models.csv", index=False, encoding="utf-8")
+    print(df)
+
+
+
+def models_to_table(response):
+    df = pd.DataFrame(response["data"])
+
+    if "price" in df.columns:
+        price_df = pd.json_normalize(df["price"])
+        price_df.columns = ["price_" + c for c in price_df.columns]
+        df = df.drop(columns=["price"]).join(price_df)
+
+    return df
+
