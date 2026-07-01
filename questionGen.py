@@ -84,7 +84,7 @@ def create_question(text, question_type, culture, question_language):
     content = response.choices[0].message.content
     return content
 
-def knowledge_to_question(knowledge_path, culture, dimension, timestamp, question_language):
+def knowledge_to_question(knowledge_path, culture, dimension, timestamp, question_language, notEnoughInfo_dimension):
     '''This function creates questions from knowledge.
        It gives knowledge_list, title_list and snippet_list scaning the knowledge_path
 
@@ -109,7 +109,7 @@ def knowledge_to_question(knowledge_path, culture, dimension, timestamp, questio
     
     knowledge_items = knowledge_data[culture][dimension]
 
-    notEnoughInfo_dimension = []
+    print(f"To question: Processing knowledge item: {dimension} in {culture}") 
 
     for knowledge_set in knowledge_items:
 
@@ -126,10 +126,13 @@ def knowledge_to_question(knowledge_path, culture, dimension, timestamp, questio
             print(f"Warning: invalid JSON, skipping: {knowledge_set[:50]}...")
             continue
 
-        print(f"Processing knowledge item: {dimension} in {culture}") 
         
         know = item.get('Knowledge') or item.get('knowledge')
-        know_cleaned = know.replace(";", ",").strip()
+
+        if know is None:
+            know_cleaned = ""
+        else:
+            know_cleaned = know.replace(";", ",").strip()
 
         titl = item.get('Title') or item.get('title')
         title_cleaned = titl.replace(";", ",").strip()
@@ -145,7 +148,8 @@ def knowledge_to_question(knowledge_path, culture, dimension, timestamp, questio
             snippet_list.append(snippet_cleaned)
             
     if notEnoughInfo_dimension is not None:
-        print("notEnoughInfo_dimension:", notEnoughInfo_dimension)
+        print("notEnoughInfo_dimension:", notEnoughInfo_dimension)  #this should be empty if all is working
+        print("this dimensions are going to be run again with another query. FIND THR SOURCE OF THE PROBLEM")
 
     question_reference = create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=question_language)
     
@@ -186,7 +190,10 @@ def knowledge_to_question(knowledge_path, culture, dimension, timestamp, questio
 
 def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path):
 
-    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path, culture, dimension, timestamp, args.question_language)
+    
+    notEnoughInfo_dimension = []
+
+    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path, culture, dimension, timestamp, args.question_language, notEnoughInfo_dimension)
 
     output_path = f"results/knowledge_output_{timestamp}.json"
 
