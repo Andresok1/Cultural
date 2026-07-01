@@ -6,13 +6,11 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from questionGen import csv_saver
 from interwebAPI import interweb_knowledge_prompting
+from deep_translator import GoogleTranslator
 
+def translate(text, target_lang):
+    return GoogleTranslator(source="en", target=target_lang).translate(text)
 
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# API key initialization
-client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
 def OpenAI_create_knowledge(text, culture, dimension):
     """
@@ -45,6 +43,10 @@ def OpenAI_create_knowledge(text, culture, dimension):
     {prompt_texts}
 
     """
+    load_dotenv()
+
+    client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
+
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[{"role": "user", "content": prompt}]
@@ -124,7 +126,7 @@ def knowledge_level_manager(args, timestamp, query_results):
 
 
                 print(f"For key {key} in {lang}:")
-                print(f"you got: {count_by_language} documents")
+                print(f"you got {count_by_language} documents")
 
                 count += count_by_language
             
@@ -149,7 +151,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                         break
                 
                 print(f"For key {key} in {lang}:")
-                print(f"you got: {count_by_language}documents")
+                print(f"you got {count_by_language} documents")
 
                 count += count_by_language
 
