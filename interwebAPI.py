@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import requests
 import json
 import pandas as pd
@@ -5,12 +7,13 @@ import pandas as pd
 
 def interweb_knowledge_prompting(text, culture, dimension):
 
-    API_KEY = "yMbyBst2N4RBPIY8UJAxMFBdzUiaLM1bBoskkitspjxmszNcva8IkKb8tO0OHI0C"
+    load_dotenv()
+    INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
 
     url = "https://interweb.l3s.uni-hannover.de"
 
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "Authorization": f"Bearer {INTERWEB_API_KEY}",
         "accept": "application/json",
         "Content-Type": "application/json" 
     }
