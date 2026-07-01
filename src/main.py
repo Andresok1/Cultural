@@ -1,6 +1,6 @@
 from datetime import datetime
 from duckDuckGo import fetch_raw_results
-from knowledgeGen import knowledge_level_manager
+from knowledgeGen import knowledge_level_manager, translate
 from pathlib import Path
 
 
@@ -60,30 +60,66 @@ for file_path in glob.glob(os.path.join(results_folder, "*")):
 cultures= [
     "Colombia",
     # "German",
-    "Italy",
+    # "Italy",
 ]
 
-all_results = {}
+culture_language = {
+    "Colombia": "es",
+    "Germany": "de",
+    "Italy": "it",
+}
+
+all_results = {}    
 
 for culture in cultures:
     for dimension in dimensions:
 
-        query = f"{dimension} in {culture}"
+        key = f"{culture}_{dimension}"
 
-        ranking = fetch_raw_results(query)
+        base_query = f"{dimension} in {culture}"
+        queries = {
+            "en": base_query
+        }
+
+        lang = culture_language.get(culture)
+        if lang:
+            queries[lang] = translate(base_query, lang)
+
+        languages = {}
+
+        for lang, query in queries.items():
+    
+            ranking = fetch_raw_results(query, key)
+
+            languages[lang] = {
+                "query": query,
+                "ranking": ranking
+            }
+
+
+        all_results[key] ={
+            "culture": culture,
+            "dimension": dimension,
+            "languages": languages
+        }   
+
+
+
+
+for key, results in all_results.items():
+    languagues = results.get("languages")
+    print(f"En {key}!!!!!:")
+    
+    key_size = 0
+    for lang, info in languagues.items():
+        ranking = info.get("ranking")
+        print(f"para lenguaje {lang} hay un tamaño de {len(ranking)}")
+        key_size += len(ranking)
         
-
-        all_results[query] ={
-
-                    "dimension": dimension,
-                    "culture": culture,
-                    "result": ranking,
-                }   
+    print(f"RANKING Size for '{key}' is: {key_size}")
 
 with open("results/query_results.json", "w", encoding="utf-8") as f:
     json.dump(all_results, f, ensure_ascii=False, indent=2)
-
-query_results = r"C:\Users\Andres\Repos\Cultural_thesis\results\query_results.json"
 
 knowledge_output= knowledge_level_manager(args, timestamp, all_results)
 
