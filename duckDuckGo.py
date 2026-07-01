@@ -73,7 +73,7 @@ def fetch_raw_results(query,key, num_results=10, print_on=False):
 
     too_short  = 0
 
-    for i, item in enumerate(results, 1):
+    for i, item in enumerate(results, 1):   #Extract info from url, clean info and ealuate for "too short"
         try:
             title = item.get('title', 'Error: No title found')
             link = item.get('href', 'Error: No link found') #get the URL of result  
@@ -115,8 +115,8 @@ def fetch_raw_results(query,key, num_results=10, print_on=False):
         except Exception as e:
             print(f"    Error processing result: {e}\n")
 
-    print("Docs with few content words:", too_short)
-    print("Final ranking size:", len(context))
+    print("Erased documents with few content:", too_short)
+    print(f"Final ranking size for '{query}', which also belongs to '{key}':", len(context))
     print("=== Finished processing all results ===")
     print("\n")
 
