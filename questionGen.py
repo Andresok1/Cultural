@@ -69,7 +69,7 @@ def create_question(text, question_type, culture, question_language):
         3. Do not change the structure of "Question", "Options" and "Reference Answer" in the output, as they will be used for evaluation. Just fill in the content after these labels.
         Context:
         {prompt_texts}
-        Give question and options based on the context provided.
+        Give question and options based on the context provided. The student does not have access to the context, so the question should be answerable without the context.
         (example: Question? A) option 1, B) option 2, C) option 3, D) option 4)
         Reference Answer: -. 
         """
