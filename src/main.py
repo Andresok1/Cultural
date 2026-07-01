@@ -26,7 +26,7 @@ parser.add_argument(
 parser.add_argument(
     "--max_results",
     type=int,
-    default=3,
+    default=5,
     help="Maximum number of docs to consider for knowledge generation. Just for single-knowledge-level.",
 )
 
