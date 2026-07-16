@@ -233,7 +233,10 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, n
         print("notEnoughInfo_dimension:", notEnoughInfo_dimension)  #this should be empty if all is working
         print("this dimensions are going to be run again with another query")
 
-    question_reference = create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=question_language)
+    if args.api == "openai":
+        question_reference = openai_create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=args.question_language)
+    else: 
+        question_reference= interweb_create_question(args, text=knowledge_list, question_type="factual", culture=culture, question_language=args.question_language)
     
     parts = question_reference.split("Reference Answer:")
 
