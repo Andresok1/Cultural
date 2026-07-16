@@ -44,6 +44,13 @@ parser.add_argument(
     help="API which is going to be used for knowledge and questions creation",
 )
 
+parser.add_argument(
+    "--llm_model",
+    choices=["gpt-4o-mini", "gpt-4.1-mini", "gemma4:12b", "qwen3.6:35b", "gpt-oss:20b", "gpt-oss:120b"],
+    default="gpt-4.1-mini",
+    help="LLM model which is going to be used for knowledge and questions creation",
+)
+
 args = parser.parse_args()
 
 # csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
