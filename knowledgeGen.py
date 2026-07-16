@@ -157,17 +157,26 @@ def knowledge_level_manager(args, timestamp, query_results):
                 else:
                     knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
 
-            if knowledge_text is None:
-                knowledge_text = ""
+                if knowledge_text is None:
+                    knowledge_text = ""
 
-            knowledge_text_cleaned = re.sub(
-                r"^```json\s*|\s*```$",  # quitar ```json al inicio y ``` al final
-                "",
-                knowledge_text,
-                flags=re.DOTALL
-            ).replace(";", ",").strip()
+                knowledge_text_cleaned = re.sub(
+                    r"^```json\s*|\s*```$",  # quitar ```json al inicio y ``` al final
+                    "",
+                    knowledge_text,
+                    flags=re.DOTALL
+                ).replace(";", ",").strip()
 
-            knowledge_output.append(knowledge_text_cleaned)    ###One knowledge result for all docs
+                knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
+                count += count_by_language
+                print("EL COUNT VA EN: ", count)
+
+                knowledge_input = knowledge_input_cache
+
+            if count < args.max_results:
+               print(f"DOCS MISSING {count}/{args.max_results}")
+
+            # knowledge_output.append(knowledge_text_cleaned)    ###One knowledge result for all docs
 
         if culture not in knowledge_output_dict:
             knowledge_output_dict[culture] = {}
