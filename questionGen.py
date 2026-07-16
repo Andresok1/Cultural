@@ -91,9 +91,74 @@ def openai_create_question(text, question_type, culture, question_language):
     content = response.choices[0].message.content
     return content
 
-def knowledge_to_question(knowledge_path, culture, dimension, timestamp, question_language, notEnoughInfo_dimension):
-    '''This function creates questions from knowledge.
-       It gives knowledge_list, title_list and snippet_list scaning the knowledge_path
+def interweb_create_question(args, text, question_type, culture, question_language):
+    """ 
+
+    """
+    if isinstance(text, str):
+        texts = [text]
+    else:
+        texts = text
+
+    prompt_texts = "\n\n".join([f"Context {i}:\n{text}" for i, text in enumerate(texts, 1)])
+
+    
+    if question_language == "local":
+         
+        local_dictionary = {
+            "colombian": "Spanish",
+            "italian": "Italian",
+            "german": "German"}
+
+        idiom = local_dictionary.get(culture.lower(), "English")
+    else:        
+        idiom = "English"
+
+    instruction = QUESTION_TYPES[question_type]
+
+    prompt= PROMPT_QUESTION(idiom, instruction, prompt_texts)
+
+    load_dotenv()
+    INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
+    url = "https://interweb.l3s.uni-hannover.de"
+    
+    headers = {
+        "Authorization": f"Bearer {INTERWEB_API_KEY}",
+        "accept": "application/json",
+        "Content-Type": "application/json" 
+    }
+
+    payload = {
+        "model": args.llm_model, #Model can be changed.
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an expert educational assessment designer specialized in cultural knowledge evaluation. Your task is to create accurate multiple-choice questions from provided cultural information. You design assessment items that evaluate understanding, reasoning, and interpretation of cultural traits. You must ensure questions are clear, unbiased, and supported by the provided context.",
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ]
+    }
+
+    response = requests.post(
+        f"{url}/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=60
+    )
+
+    if response.status_code != 200:
+        print("Error:", response.status_code, response.text)
+    else:
+        return response.json()["choices"][0]["message"]["content"]
+
+
+def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, notEnoughInfo_dimension):
+    '''This function separates title, snippet and knowledge from the knowledge_path and clean them. and separates them into lists to better visualization and data control to create a question.
+    It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
+    It creates at the end the question_reference_{timestamp}.json file with the question, options and reference answer.
 
        return:
         question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
