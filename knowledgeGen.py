@@ -143,7 +143,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                 knowledge_input_cache = [] # Declaration and reset knowledge_input for the next language
                 for content in ranking:
                     if content:
-                        knowledge_input.append(content) #Accumulation of Knowlege input for collective analysis. 
+                        knowledge_input_cache.append(content) #Accumulation of Knowlege input for collective analysis. 
                         count_by_language += 1
 
                     if count_by_language == 3:
@@ -152,15 +152,10 @@ def knowledge_level_manager(args, timestamp, query_results):
                 print(f"For key {key} in {lang}:")
                 print(f"you got {count_by_language} documents")
 
-                count += count_by_language
-
-            if count < args.max_results:
-               print(f"DOCS MISSING {count}/{args.max_results}")
-
-            if args.api == "openai":
-                knowledge_text= OpenAI_create_knowledge(text=knowledge_input, culture=culture, dimension=dimension)
-            else:
-                knowledge_text = interweb_knowledge_prompting(text=knowledge_input, culture=culture, dimension=dimension)
+                if args.api == "openai":
+                    knowledge_text= openai_create_knowledge(text=knowledge_input_cache, culture=culture, dimension=dimension)
+                else:
+                    knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
 
             if knowledge_text is None:
                 knowledge_text = ""
