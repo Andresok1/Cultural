@@ -231,7 +231,7 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, n
 
     if notEnoughInfo_dimension is not None:
         print("notEnoughInfo_dimension:", notEnoughInfo_dimension)  #this should be empty if all is working
-        print("this dimensions are going to be run again with another query. FIND THR SOURCE OF THE PROBLEM")
+        print("this dimensions are going to be run again with another query")
 
     question_reference = create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=question_language)
     
