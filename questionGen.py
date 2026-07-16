@@ -198,27 +198,37 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, n
             print(f"Warning: invalid JSON, skipping: {knowledge_set[:50]}...")
             continue
 
-        
-        know = item.get('Knowledge') or item.get('knowledge')
 
-        if know is None:
-            know_cleaned = ""
-        else:
-            know_cleaned = know.replace(";", ",").strip()
-
-        titl = item.get('Title') or item.get('title')
-        title_cleaned = titl.replace(";", ",").strip()
-
-        snipp = item.get('Snippet') or item.get('snippet')
-        snippet_cleaned = snipp.replace(";", ",").strip()
-
-        if "(info missing)" in title_cleaned:
-            notEnoughInfo_dimension.append(f"{dimension} in {culture}")
-        else:
-            knowledge_list.append(know_cleaned)
-            title_list.append(title_cleaned)
-            snippet_list.append(snippet_cleaned)
+        for data in item:
+            know = data.get('Knowledge') or data.get('knowledge')
             
+            if know:
+                know_cleaned = ", ".join(know) if isinstance(know, list) else str(know)
+                know_cleaned = know_cleaned.replace(";", ",").strip()
+                knowledge_list.append(know_cleaned)
+            else: 
+                knowledge_list.append("EMPTY")
+
+            titl = data.get('Title') or data.get('title')
+
+            if titl:
+                title_cleaned = titl.replace(";", ",").strip()
+                title_list.append(title_cleaned)
+            else:
+                title_list.append("EMPTY")
+
+            snipp = data.get('Snippet') or data.get('snippet')
+
+            if snipp:
+                snippet_cleaned = snipp.replace(";", ",").strip()
+
+                snippet_list.append(snippet_cleaned)
+            else:
+                snippet_list.append("EMPTY")
+
+            if "(info missing)" in title_cleaned:
+                notEnoughInfo_dimension.append(f"{dimension} in {culture}")
+
     if notEnoughInfo_dimension is not None:
         print("notEnoughInfo_dimension:", notEnoughInfo_dimension)  #this should be empty if all is working
         print("this dimensions are going to be run again with another query. FIND THR SOURCE OF THE PROBLEM")
