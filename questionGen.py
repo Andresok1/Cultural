@@ -250,8 +250,6 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, n
     question_cleaned = question.replace("\n", " ")
 
     abcd_options = question_text[split_index:].strip()
-    # abcd_options_cleaned = abcd_options.replace("  ", " ")
-    # abcd_options_cleaned = abcd_options.replace("\n", " ")
     abcd_options_cleaned = abcd_options.replace("\n", " ").replace("  ", " ")
 
     reference_answer = parts[1].strip()
@@ -278,7 +276,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path):
     
     notEnoughInfo_dimension = []
 
-    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(knowledge_path, culture, dimension, timestamp, args.question_language, notEnoughInfo_dimension)
+    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, notEnoughInfo_dimension)
 
     output_path = f"results/knowledge_output_{timestamp}.json"
 
