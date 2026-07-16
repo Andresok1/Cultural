@@ -5,13 +5,55 @@ import json
 import os
 from dotenv import load_dotenv
 import pandas as pd
+import requests
+
+QUESTION_TYPES = {
+    "factual": "Based on the context, think through all relevant cultural points step by step and generate a factual question. The question type can include single-choice, true/false, or fill-in-the-blank. Ensure that the question stem is clear, the options are plausible but misleading (distractors), and the answer is accurate.",
+    "conceptual": "Based on the context, think through all relevant cultural points step by step and generate a conceptual explanation question. The question should focus on the learner’s understanding of the concepts, structures, or values inside cultural phenomena, rather than simple memorization. Suitable formats include multiple-choice or true/false questions. Ensure the question is thought-provoking and the answer is well-justified.",
+    "misleading": "Based on the context, think through all relevant cultural points step by step and generate a misleading question to assess whether learners can identify cultural misunderstandings, stereotypes, or biases. The question should focus on learners’ critical thinking about culture, identifying which statements or Behaviors reflect misunderstandings, oversimplifications, biases, or stereotypes, and guide them toward more accurate or respectful understandings. Possible formats include multiple-choice, true/false, case analysis, or short-answer questions.",
+    "multihop": "Based on the context, think through all relevant cultural points step by step and generate a multi-hop reasoning question to assess whether the learner can synthesize multiple cultural elements and understand the deeper logic or internal connections among cultural phenomena. The question should prompt learners to start from multiple information points, integrate cultural knowledge, and perform logical analysis, comparison, or generalization. Scenario-based, integrated analysis, or comparative reasoning questions are recommended."
+}
+
+def PROMPT_QUESTION(idiom, instruction, prompt_texts):
+    
+    prompt = f"""
+        Task: Answer in {idiom}.
+        Instruction:
+        {instruction}
+        The correct answer must be randomly placed among A, B, C, and D.
+        The position of the correct answer should vary across generated questions.
+
+        Questions have to be clear.
+        The options should be plausible but misleading distractors.
+        The answer should be accurate.
+        Reference Answer must indicate the correct option.
+
+        Note:
+        1. The question should avoid explicitly mentioning cultural concepts, terminology,
+        or characteristics, in order to effectively assess the student’s understanding
+        of cultural traits.
+        2. A reference answer should be provided after the question.
+        3. Do not change the structure of "Question", "Options" and "Reference Answer" in the output, as they will be used for evaluation. Just fill in the content after these labels.
+        Context:
+        {prompt_texts}
+        
+        The question should be in the following format:
+        Question: ...
+        A) ...
+        B) ...
+        C) ...
+        D) ...
+
+        Reference Answer: X
+        """
+    return prompt
 
 
-
-def create_question(text, question_type, culture, question_language):
+def openai_create_question(text, question_type, culture, question_language):
     """
-    Extracts important features and content related to a specific culture
-    from a given text. Returns format: title, original snippet and knowledge extrated from the text.
+    As input it receives a text and extracts important features and content related to a specific culture to generate a question.
+    
+    Returns format: title, snippet and knowledge extracted from the text.
     Does not invent information if there is insufficient support.
     """
     if isinstance(text, str):
@@ -33,44 +75,10 @@ def create_question(text, question_type, culture, question_language):
     else:        
         idiom = "English"
 
-    if question_type == "factual":
-        instruction = f"""
-        Based on the context, think through all relevant cultural points step by step and generate a factual question. The question type can include single-choice, true/false, or fill-in-the-blank. Ensure that the question stem is clear, the options are plausible but misleading (distractors), and the answer is accurate.
-        """
-    elif question_type == "conceptual":
-        instruction = f"""
-        Based on the context, think through all relevant cultural points step by step and generate a conceptual explanation question. The question should focus on the learner’s understanding of the concepts, structures, or values inside cultural phenomena, rather than simple memorization. Suitable formats include multiple-choice or true/false questions. Ensure the question is thought-provoking and the answer is well-justified.        
-        """  
-    elif question_type == "misleading":
-        instruction = f"""
-        Based on the context, think through all relevant cultural points step by step and generate a misleading question to assess whether learners can identify cultural misunderstandings, stereotypes, or biases. The question should focus on learners’ critical thinking about culture, identifying which statements or Behaviors reflect misunderstandings, oversimplifications, biases, or stereotypes, and guide them toward more accurate or respectful understandings. Possible formats include multiple-choice, true/false, case analysis, or short-answer questions.
-        """
-    elif question_type == "multihop":
-        instruction = f"""
-        and generate a multi-hop reasoning question to assess whether the learner can synthesize multiple cultural elements and understand the deeper logic or internal connections among cultural phenomena. The question should prompt learners to start from multiple information points, integrate cultural knowledge, and perform logical analysis, comparison, or generalization. Scenario-based, integrated analysis, or comparative reasoning questions are recommended.
-        """
-    else:
-        raise ValueError("Invalid question type. Must be one of: factual, comparative, causal, hypothetical.")
+    instruction = QUESTION_TYPES[question_type]
 
+    prompt= PROMPT_QUESTION(idiom, instruction, prompt_texts)
 
-    prompt = f"""
-        Task: Answer in {idiom}.
-        Instruction:
-        {instruction}
-        Note:
-        1. The question should avoid explicitly mentioning cultural concepts, terminology,
-        or characteristics, in order to effectively assess the student’s understanding
-        of cultural traits.
-        2. A reference answer should be provided after the question.
-        3. Do not change the structure of "Question", "Options" and "Reference Answer" in the output, as they will be used for evaluation. Just fill in the content after these labels.
-        Context:
-        {prompt_texts}
-        Give question and options based on the context provided. The student does not have access to the context, so the question should be answerable without the context.
-        (example: Question? A) option 1, B) option 2, C) option 3, D) option 4)
-        Reference Answer: -. 
-        """
-
-    # return prompt
     load_dotenv()
 
     client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
