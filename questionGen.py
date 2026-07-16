@@ -160,8 +160,8 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, n
     It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
     It creates at the end the question_reference_{timestamp}.json file with the question, options and reference answer.
 
-       return:
-        question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
+    return:
+    question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
     '''
     output_path = f"results/question_reference_{timestamp}.json"
     
