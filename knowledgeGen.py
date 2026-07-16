@@ -3,9 +3,8 @@ import os
 import re
 
 from dotenv import load_dotenv
-from openai import OpenAI
 from questionGen import csv_saver
-from interwebAPI import interweb_knowledge_prompting
+from promptingLLM import interweb_create_knowledge, openai_create_knowledge
 from deep_translator import GoogleTranslator
 
 def translate(text, target_lang):
@@ -113,9 +112,9 @@ def knowledge_level_manager(args, timestamp, query_results):
                     if content:
                         knowledge_input.append(content) 
                         if args.api == "openai":
-                            knowledge_text= OpenAI_create_knowledge(text=content, culture=culture, dimension=dimension)
+                            knowledge_text= openai_create_knowledge(text=content, culture=culture, dimension=dimension)
                         else:
-                            knowledge_text = interweb_knowledge_prompting(text=content, culture=culture, dimension=dimension)#
+                            knowledge_text = interweb_create_knowledge(text=content, culture=culture, dimension=dimension)#
                             #IF here it says something about (info missing) it should look for more docs
 
                         knowledge_output.append(knowledge_text)   
@@ -141,7 +140,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                 ranking = data.get("ranking", [])
 
                 count_by_language = 0
-
+                knowledge_input_cache = [] # Declaration and reset knowledge_input for the next language
                 for content in ranking:
                     if content:
                         knowledge_input.append(content) #Accumulation of Knowlege input for collective analysis. 
