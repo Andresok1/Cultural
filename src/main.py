@@ -59,8 +59,9 @@ args = parser.parse_args()
 
 # dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
 dimensions= [
-    "tax & accounting",
-    "measurement system",
+    # "tax & accounting",
+    # "measuring system",
+    "tipical food",
 ]
 
 timestamp = datetime.now().strftime("%m%d_%H%M")
