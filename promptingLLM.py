@@ -136,14 +136,58 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
             timeout=120
         )
 
-    print("Interweb API is using:", model)
-    if response.status_code != 200:
-        print("Error:", response.status_code, response.text)
-    else:
-        return response.json()["choices"][0]["message"]["content"]
+        print("Interweb API is using:", model)
+
+        if response.status_code != 200:
+            print("Error:", response.status_code, response.text)
+
+            if retries > 0:
+                print(f"Retrying... attempts left: {retries}")
+                return interweb_create_knowledge(
+                    args,
+                    text,
+                    culture,
+                    dimension,
+                    retries - 1
+                )
+            
+            # return None
+        
+        answer = response.json()["choices"][0]["message"]["content"]
+
+        if answer is None or "[]" in answer or answer.strip() == "":
+            if retries > 0:
+                print(f"Empty response. Retrying... attempts left: {retries}")
+                return interweb_create_knowledge(
+                    args,
+                    text,
+                    culture,
+                    dimension,
+                    retries - 1
+                )
+
+            return answer
+
+        return answer
+    
+    except requests.exceptions.RequestException as e:
+        print("Request failed:", e)
+
+        if retries > 0:
+            return interweb_create_knowledge(
+                args,
+                text,
+                culture,
+                dimension,
+                retries - 1
+            )
+
+        return None
+        
+
  
 
-def interweb_model_list(args, text, question_type, culture, question_language, model= "gpt-4o-mini"):
+def interweb_model_list():
     API_KEY = "yMbyBst2N4RBPIY8UJAxMFBdzUiaLM1bBoskkitspjxmszNcva8IkKb8tO0OHI0C"
     url = "https://interweb.l3s.uni-hannover.de"
 
