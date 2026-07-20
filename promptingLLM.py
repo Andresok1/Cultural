@@ -122,7 +122,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
             },
             {
                 "role": "user",
-                "content": f"{user_prompt}\n\n{prompt_texts}"
+                "content": f"{user_prompt}\n"
             }
         ]
     }
