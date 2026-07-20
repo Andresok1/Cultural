@@ -46,8 +46,8 @@ parser.add_argument(
 
 parser.add_argument(
     "--llm_model",
-    choices=["gpt-4o-mini", "gpt-4.1-mini", "gemma4:12b", "qwen3.6:35b", "gpt-oss:20b", "gpt-oss:120b"],
-    default="gpt-4.1-mini",
+    choices=["deepseek-r1:32b", "gpt-4.1-mini", "gemma4:12b", "qwen3.6:35b", "gpt-oss:20b", "gpt-oss:120b"],
+    default="llama3:70b",
     help="LLM model which is going to be used for knowledge and questions creation",
 )
 
@@ -60,8 +60,8 @@ args = parser.parse_args()
 # dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
 dimensions= [
     # "tax & accounting",
-    # "measuring system",
-    "tipical food",
+    "measuring system",
+    # "tipical food",
 ]
 
 timestamp = datetime.now().strftime("%m%d_%H%M")
