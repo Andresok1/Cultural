@@ -134,7 +134,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                 count += count_by_language
                 print("EL COUNT VA EN: ", count)
 
-                knowledge_input = knowledge_input_cache
+                knowledge_input.append(knowledge_input_cache)   #Input storage for each language
 
             if count < args.max_results:
                print(f"DOCS MISSING {count}/{args.max_results}")
