@@ -14,6 +14,8 @@ QUESTION_TYPES = {
     "multihop": "Based on the context, think through all relevant cultural points step by step and generate a multi-hop reasoning question to assess whether the learner can synthesize multiple cultural elements and understand the deeper logic or internal connections among cultural phenomena. The question should prompt learners to start from multiple information points, integrate cultural knowledge, and perform logical analysis, comparison, or generalization. Scenario-based, integrated analysis, or comparative reasoning questions are recommended."
 }
 
+ROLE_PROMPT = "You are an expert educational assessment designer specialized in cultural knowledge evaluation. Your task is to create accurate multiple-choice questions from provided cultural information. You design assessment items that evaluate understanding, reasoning, and interpretation of cultural traits. You must ensure questions are clear, unbiased, and supported by the provided context."
+
 def PROMPT_QUESTION(idiom, instruction, prompt_texts):
     
     prompt = f"""
@@ -133,7 +135,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
         "messages": [
             {
                 "role": "system",
-                "content": "You are an expert educational assessment designer specialized in cultural knowledge evaluation. Your task is to create accurate multiple-choice questions from provided cultural information. You design assessment items that evaluate understanding, reasoning, and interpretation of cultural traits. You must ensure questions are clear, unbiased, and supported by the provided context.",
+                "content": ROLE_PROMPT,
             },
             {
                 "role": "user",
@@ -155,7 +157,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
         return response.json()["choices"][0]["message"]["content"]
 
 
-def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, notEnoughInfo_dimension):
+def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, knowledge_output_dict):
     '''This function separates title, snippet and knowledge from the knowledge_path and clean them. and separates them into lists to better visualization and data control to create a question.
     It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
     It creates at the end the question_reference_{timestamp}.json file with the question, options and reference answer.
