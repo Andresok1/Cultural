@@ -86,8 +86,8 @@ def openai_create_question(text, question_type, culture, question_language):
     client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[{"role": "user", "content": prompt}]
+        model="gpt-4.1-mini",   #OPENAI constant Model
+        messages=[{"role": "user", "content": ROLE_PROMPT + prompt}]
     )
 
     content = response.choices[0].message.content
@@ -177,11 +177,11 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
     knowledge_list = []
     title_list = []
     snippet_list = []
+    notEnoughInfo = []
 
-    with open(knowledge_path, "r", encoding="utf-8") as f:
-        knowledge_data = json.load(f)
-    
-    knowledge_items = knowledge_data[culture][dimension]
+
+    knowledge_items = knowledge_output_dict[culture][dimension]
+
 
     print(f"To question: Processing knowledge item: {dimension} in {culture}") 
 
@@ -229,10 +229,11 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
                 snippet_list.append("EMPTY")
 
             if "(info missing)" in title_cleaned:
-                notEnoughInfo_dimension.append(f"{dimension} in {culture}")
+                print("Added to notEnoughInfo_dimension: ",title_cleaned)
+                notEnoughInfo.append(f"{dimension} in {culture}")
 
-    if notEnoughInfo_dimension is not None:
-        print("notEnoughInfo_dimension:", notEnoughInfo_dimension)  #this should be empty if all is working
+    if notEnoughInfo is not None:
+        print("notEnoughInfo_dimension:", notEnoughInfo)  #this should be empty if all is working
         print("this dimensions are going to be run again with another query")
 
     if args.api == "openai":
@@ -273,12 +274,11 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
 
 
 
-def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path):
+def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, knowledge_output_dict):
 
-    
-    notEnoughInfo_dimension = []
 
-    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, notEnoughInfo_dimension)
+
+    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, knowledge_output_dict)
 
     output_path = f"results/knowledge_output_{timestamp}.json"
 
