@@ -69,7 +69,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                     if content:
                         knowledge_input.append(content) 
                         if args.api == "openai":
-                            knowledge_text= openai_create_knowledge(text=content, culture=culture, dimension=dimension)
+                            knowledge_text= openai_create_knowledge(args, text=content, culture=culture, dimension=dimension)
                         else:
                             knowledge_text = interweb_create_knowledge(text=content, culture=culture, dimension=dimension)#
                             #IF here it says something about (info missing) it should look for more docs
@@ -110,19 +110,25 @@ def knowledge_level_manager(args, timestamp, query_results):
                 print(f"you got {count_by_language} documents")
 
                 if args.api == "openai":
-                    knowledge_text= openai_create_knowledge(text=knowledge_input_cache, culture=culture, dimension=dimension)
+                    knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
                 else:
-                    knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
+                    just_one = knowledge_input_cache[0]
+                    knowledge_text = interweb_create_knowledge(args, text=just_one, culture=culture, dimension=dimension)
 
                 if knowledge_text is None:
                     knowledge_text = ""
 
-                knowledge_text_cleaned = re.sub(
-                    r"^```json\s*|\s*```$",  # quitar ```json al inicio y ``` al final
+
+                knowledge_text = re.sub(
+                    r"```(?:json)?",
                     "",
                     knowledge_text,
-                    flags=re.DOTALL
-                ).replace(";", ",").strip()
+                    flags=re.IGNORECASE
+                )
+
+                knowledge_text_cleaned = knowledge_text.replace("```", "").strip()
+
+                print("HPPPPPPPPPTA",knowledge_text_cleaned)
 
                 knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
                 count += count_by_language
