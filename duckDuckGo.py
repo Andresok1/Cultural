@@ -99,7 +99,7 @@ def fetch_raw_results(query,key, num_results=10, print_on=False):
             print("Done!") if print_on else None
             print(f"    Content: {content_cleaned[:500]}...\n") if print_on else None
 
-            if len(content_cleaned.split()) > 300:
+            if len(content_cleaned.split()) > 500:
 
                 context.append(content_cleaned)
 
