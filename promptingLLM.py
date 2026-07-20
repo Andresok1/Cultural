@@ -195,12 +195,14 @@ def interweb_model_list():
         "Authorization": f"Bearer {API_KEY}",
     }
 
+    model_name = "gpt-5-nano" #TEST
+
     response = requests.get(
-        f"{url}/models",
+        f"{url}/v1/models",
         headers=headers,
         timeout=60
     )
-
+    print(response.json())
     response.raise_for_status()
     models = response.json()
 
