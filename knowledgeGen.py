@@ -151,13 +151,13 @@ def knowledge_level_manager(args, timestamp, query_results):
 
         knowledge_input_dict[culture][dimension] = knowledge_input 
 
-        with open(output_path, "w", encoding="utf-8") as f:     #Save knowledge_output
+        with open(output_path, "w", encoding="utf-8") as f:     #Save knowledge_output (RAW knowledge)
             json.dump(knowledge_output_dict, f, ensure_ascii=False, indent=2)
 
         with open(input_path, "w", encoding="utf-8") as f:      #Save knowledge_input
             json.dump(knowledge_input_dict, f, ensure_ascii=False, indent=2)
 
-        csv_saver(args, dimension, culture, timestamp, culture_dfs, output_path)
+        csv_saver(args, dimension, culture, timestamp, culture_dfs, output_path, knowledge_output_dict)
 
 
     return knowledge_output
