@@ -26,7 +26,7 @@ def fetch_page_content(url, max_chars=50000):
         return f"Could not fetch content: {e}"
 
 
-def fetch_raw_results(query,key, num_results=10, print_on=False):
+def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False):
     """
     Search with DuckDuckGo (posiblemente no sea DuckDuckGo sino uno general, usa DDGS) and optionally 
     fetch full content of results. 
@@ -35,13 +35,9 @@ def fetch_raw_results(query,key, num_results=10, print_on=False):
 
     context = []
 
-    print(f"--- Search Results for: {query} ---")
-
     backends = ["google", "bing", "duckduckgo", "brave", "yahoo"] 
 
     results_original = []
-
-    print(f"Results using:")
 
     for backend in backends:
         try:
