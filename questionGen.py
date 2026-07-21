@@ -183,7 +183,7 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
     knowledge_items = knowledge_output_dict[culture][dimension]
 
 
-    print(f"To question: Processing knowledge item: {dimension} in {culture}") 
+    print(f"Procesing question to '{dimension}' in '{culture}'") 
 
     for knowledge_set in knowledge_items:
 
@@ -191,15 +191,12 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
             print("Warning: empty knowledge_set, skipping")
             continue
         
-        clean_json = re.sub(r"^```json\s*|\s*```$", "", knowledge_set, flags=re.DOTALL).strip()
 
         try:
             item = json.loads(knowledge_set)  # it converts the string back to a dictionary 
-
         except json.JSONDecodeError:
             print(f"Warning: invalid JSON, skipping: {knowledge_set[:50]}...")
             continue
-
 
         for data in item:
             know = data.get('Knowledge') or data.get('knowledge')
@@ -217,6 +214,7 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
                 title_cleaned = titl.replace(";", ",").strip()
                 title_list.append(title_cleaned)
             else:
+                title_cleaned = ""
                 title_list.append("EMPTY")
 
             snipp = data.get('Snippet') or data.get('snippet')
@@ -234,14 +232,15 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
 
     if notEnoughInfo is not None:
         print("notEnoughInfo_dimension:", notEnoughInfo)  #this should be empty if all is working
-        print("this dimensions are going to be run again with another query")
 
     if args.api == "openai":
         question_reference = openai_create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=args.question_language)
     else: 
         question_reference= interweb_create_question(args, text=knowledge_list, question_type="factual", culture=culture, question_language=args.question_language)
     
-    parts = question_reference.split("Reference Answer:")
+    question_reference = question_reference.split("Question:", 1)[1]
+
+    parts = question_reference.split("Reference Answer:", 1)
 
     question_text = parts[0].replace("Question:", "").strip()
     
