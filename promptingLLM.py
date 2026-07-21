@@ -112,9 +112,10 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
 
     user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
 
-    model = args.llm_model  # Replace with the model available in your API. gpt-4o-mini
+    print("Interweb API is using:", args.llm_model)
+
     payload = {
-        "model": model,  # Replace with the model available in your API. gpt-4o-mini
+        "model": args.llm_model,  # Replace with the model available in your API. gpt-4o-mini
         "messages": [
             {
                 "role": "system",
@@ -133,10 +134,8 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
             f"{url}/v1/chat/completions",
             headers=headers,
             json=payload,
-            timeout=120
+            timeout=60
         )
-
-        print("Interweb API is using:", model)
 
         if response.status_code != 200:
             print("Error:", response.status_code, response.text)
@@ -267,3 +266,29 @@ def models_to_table(response):
 
     return df
 
+def json_cleanig(text):
+    """
+    Extract JSON array or object from LLM response.
+    """
+
+    text = re.sub(
+        r"```(?:json)?",
+        "",
+        text,
+        flags=re.IGNORECASE
+    )
+
+    text = text.replace("```", "").strip()
+
+    array_match = re.search(r"\[.*\]", text, re.DOTALL)
+
+    if array_match:
+        return array_match.group(0)
+
+    object_match = re.search(r"\{.*\}", text, re.DOTALL)
+
+    if object_match:
+        return object_match.group(0)
+
+    return None
+    
