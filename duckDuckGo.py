@@ -58,14 +58,13 @@ def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False)
         except DDGSException as e:
             print(f"    {backend} backend: 0")
 
+    print(f"Retrieved: {len(results_original)}")
+
     unique_results = {item['href']: item for item in results_original}.values()
 
     eliminated = len(results_original) - len(unique_results)
-    print(f"    Repeated results eliminated: {eliminated}")
+    print(f"Repeated: {eliminated}")
     results = list(unique_results)
-    
-    
-    print(f"--- Total results retrieved: {len(results)} ---")
 
 
     too_short  = 0
@@ -95,7 +94,7 @@ def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False)
             print("Done!") if print_on else None
             print(f"    Content: {content_cleaned[:500]}...\n") if print_on else None
 
-            if len(content_cleaned.split()) > 500:
+            if len(content_cleaned.split()) > min_length:
 
                 context.append(content_cleaned)
 
@@ -105,11 +104,8 @@ def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False)
         except Exception as e:
             print(f"    Error processing result: {e}\n")
 
-    print("Erased documents with few content:", too_short)
-    print(f"Final ranking size for '{query}', which also belongs to '{key}':", len(context))
-    print("=== Finished processing all results ===")
-    print("\n")
-
+    print(f"Few content: {too_short} (At least more than {min_length} words)") 
+    print(f"Total results: {len(context)}")
 
     return context
 
