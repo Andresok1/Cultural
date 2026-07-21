@@ -4,7 +4,7 @@ import re
 
 from dotenv import load_dotenv
 from questionGen import csv_saver
-from promptingLLM import interweb_create_knowledge, openai_create_knowledge
+from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge
 from deep_translator import GoogleTranslator
 
 def translate(text, target_lang):
@@ -118,15 +118,8 @@ def knowledge_level_manager(args, timestamp, query_results):
                 if knowledge_text is None:
                     knowledge_text = ""
 
+                knowledge_text_cleaned= json_cleanig(knowledge_text)
 
-                knowledge_text = re.sub(
-                    r"```(?:json)?",
-                    "",
-                    knowledge_text,
-                    flags=re.IGNORECASE
-                )
-
-                knowledge_text_cleaned = knowledge_text.replace("```", "").strip()
 
                 print("HPPPPPPPPPTA",knowledge_text_cleaned)
 
