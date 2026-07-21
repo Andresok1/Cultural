@@ -82,7 +82,6 @@ def knowledge_level_manager(args, timestamp, query_results):
 
 
                 print(f"For key {key} in {lang}:")
-                print(f"you got {count_by_language} documents")
 
                 count += count_by_language
             
@@ -107,7 +106,6 @@ def knowledge_level_manager(args, timestamp, query_results):
                         break
                 
                 print(f"For key {key} in {lang}:")
-                print(f"you got {count_by_language} documents")
 
                 if args.api == "openai":
                     knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
@@ -125,10 +123,9 @@ def knowledge_level_manager(args, timestamp, query_results):
 
                 knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
                 count += count_by_language
-                print("EL COUNT VA EN: ", count)
-
                 knowledge_input.append(knowledge_input_cache)   #Input storage for each language
 
+            print(f"({count}/{args.max_results})")
             if count < args.max_results:
                print(f"DOCS MISSING {count}/{args.max_results}")
 
