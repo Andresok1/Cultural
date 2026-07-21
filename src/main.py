@@ -102,8 +102,10 @@ for culture in cultures:
 
         languages = {}
 
+        print(f"############################################")
         for lang, query in queries.items():
-    
+            print(f"Query: {query} ")
+            print(f"------------{lang}--------------")
             ranking = fetch_raw_results(query, key)
 
             languages[lang] = {
@@ -111,7 +113,8 @@ for culture in cultures:
                 "ranking": ranking
             }
 
-
+            print(f"********************************************")
+    
         all_results[key] ={
             "culture": culture,
             "dimension": dimension,
@@ -119,19 +122,18 @@ for culture in cultures:
         }   
 
 
-
-
 for key, results in all_results.items():
     languagues = results.get("languages")
-    print(f"En {key}!!!!!:")
+    
+    print(f"###{key}'[# docs]:###")
     
     key_size = 0
     for lang, info in languagues.items():
         ranking = info.get("ranking")
-        print(f"para lenguaje {lang} hay un tamaño de {len(ranking)}")
+        print(f"- {lang}: {len(ranking)} ")
         key_size += len(ranking)
-        
-    print(f"RANKING Size for '{key}' is: {key_size}")
+    print(f"--------TOTAL: {key_size} --------")
+    print("\n")
 
 with open("results/query_results.json", "w", encoding="utf-8") as f:
     json.dump(all_results, f, ensure_ascii=False, indent=2)
