@@ -60,8 +60,8 @@ args = parser.parse_args()
 # dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
 dimensions= [
     # "tax & accounting",
-    "measuring system",
-    # "tipical food",
+    # "measuring system",
+    "tipical food",
 ]
 
 timestamp = datetime.now().strftime("%m%d_%H%M")
@@ -73,15 +73,15 @@ for file_path in glob.glob(os.path.join(results_folder, "*")):
         os.remove(file_path)
     
 cultures= [
-    "Colombia",
-    # "German",
-    # "Italy",
+    "Colombian",
+    "German",
+    # "Italian",
 ]
 
 culture_language = {
-    "Colombia": "es",
-    "Germany": "de",
-    "Italy": "it",
+    "Colombian": "es",
+    "German": "de",
+    "Italian": "it",
 }
 
 all_results = {}    
@@ -101,7 +101,7 @@ for culture in cultures:
             queries[lang] = translate(base_query, lang)
 
         languages = {}
-
+        print(f"\n")
         print(f"############################################")
         for lang, query in queries.items():
             print(f"Query: {query} ")
