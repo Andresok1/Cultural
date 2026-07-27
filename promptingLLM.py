@@ -149,8 +149,10 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
                     dimension,
                     retries - 1
                 )
+            else: 
+                print("Game Over")
             
-            # return None
+            return None
         
         answer = response.json()["choices"][0]["message"]["content"]
 
@@ -165,8 +167,9 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
                     retries - 1
                 )
 
-            return answer
+            return None
 
+        print("     DONE: knowledge created")
         return answer
     
     except requests.exceptions.RequestException as e:
@@ -183,8 +186,6 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
 
         return None
         
-
- 
 
 def interweb_model_list():
     API_KEY = "yMbyBst2N4RBPIY8UJAxMFBdzUiaLM1bBoskkitspjxmszNcva8IkKb8tO0OHI0C"
