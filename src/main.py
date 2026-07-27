@@ -46,8 +46,8 @@ parser.add_argument(
 
 parser.add_argument(
     "--llm_model",
-    choices=["deepseek-r1:32b", "gpt-4.1-mini", "gemma4:12b", "qwen3.6:35b", "gpt-oss:20b", "gpt-oss:120b"],
-    default="llama3:70b",
+    choices=["gpt-4.1-mini", "gemma3:27b", "qwen3.6:35b", "llama3:70b", "deepseek-r1:32b"],
+    default="gpt-4.1-mini", 
     help="LLM model which is going to be used for knowledge and questions creation",
 )
 
