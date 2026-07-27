@@ -99,7 +99,7 @@ def openai_create_question(text, question_type, culture, question_language):
     content = response.choices[0].message.content
     return content
 
-def interweb_create_question(args, text, question_type, culture, question_language):
+def interweb_create_question(args, text, question_type, culture, question_language, retries=5):
     """ 
 
     """
