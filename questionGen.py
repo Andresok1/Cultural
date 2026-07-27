@@ -244,7 +244,8 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
 
     print(f"Procesing question to '{dimension}' in '{culture}'") 
 
-    for knowledge_set in knowledge_items:
+    
+    for index, knowledge_set in enumerate(knowledge_items):
 
         if not knowledge_set or not knowledge_set.strip():
             print("Warning: empty knowledge_set in some language Query (english /local), skipping")
@@ -254,7 +255,6 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
             else:
                 print(missing_know + "Local Language")
             continue
-        
 
         try:
             item = json.loads(knowledge_set)  # it converts the string back to a dictionary 
@@ -279,7 +279,6 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
             else: 
                 knowledge_list.append("EMPTY")
 
-            titl = data.get('Title') or data.get('title')
 
             if titl:
                 title_cleaned = titl.replace(";", ",").strip()
@@ -288,11 +287,9 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
                 title_cleaned = ""
                 title_list.append("EMPTY")
 
-            snipp = data.get('Snippet') or data.get('snippet')
 
             if snipp:
                 snippet_cleaned = snipp.replace(";", ",").strip()
-
                 snippet_list.append(snippet_cleaned)
             else:
                 snippet_list.append("EMPTY")
