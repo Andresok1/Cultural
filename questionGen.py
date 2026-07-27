@@ -355,7 +355,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, 
 
 
 
-    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list = knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, knowledge_output_dict)
+    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list, = knowledge_to_question(args, culture, dimension, knowledge_output_dict)
 
     output_path = f"results/knowledge_output_{timestamp}.json"
 
