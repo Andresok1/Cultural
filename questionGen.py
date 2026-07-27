@@ -221,7 +221,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
     return:
     question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
     '''
-    output_path = f"results/question_reference_{timestamp}.json"
+    output_path = f"results/questions.json"
     
 
     if os.path.exists(output_path):
