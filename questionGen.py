@@ -369,7 +369,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, 
 
 
 
-    data_knowledge_info = {}
+    data_knowledge_info = {}    #TODO: The structure can be in groups of 3. 
     for i, (t, s, k) in enumerate(zip(title_list, snippet_list, knowledge_list), start=1):
         data_knowledge_info[f"title_{i}"] = [t]
         data_knowledge_info[f"snippet_{i}"] = [s]
@@ -380,14 +380,13 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, 
     if culture not in knowledge_vector:
         knowledge_vector[culture] = {}
 
-    knowledge_vector[culture][dimension] = {
-        "data": data_knowledge_info
-    }
+
+    knowledge_vector[culture][dimension] = data_knowledge_info
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(knowledge_vector, f, ensure_ascii=False, indent=2)
 
-
+    ### QUESTION PREPARATION 
     df_questions_reference = pd.DataFrame({
         "question": [question],
         "abcd_options": [abcd_options],
@@ -395,7 +394,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, 
     })
 
 
-
+    ### .CSV preparation and saving 
     df = pd.concat([df_dimension.reset_index(drop=True),
                     df_knowledge_info.reset_index(drop=True),
                     df_questions_reference.reset_index(drop=True)], axis=1)
