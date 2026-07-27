@@ -352,7 +352,10 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
 
 
 def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, knowledge_output_dict):
-
+    '''This function prepares the question data to deliver it in `.csv` format and save it in the `results` folder.
+    return:
+        None.
+    '''
 
 
     question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list, = knowledge_to_question(args, culture, dimension, knowledge_output_dict)
