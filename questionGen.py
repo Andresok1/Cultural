@@ -58,6 +58,12 @@ def openai_create_question(text, question_type, culture, question_language):
     Returns format: title, snippet and knowledge extracted from the text.
     Does not invent information if there is insufficient support.
     """
+
+    if not text:
+
+        return  None
+    
+    
     if isinstance(text, str):
         texts = [text]
     else:
@@ -97,6 +103,10 @@ def interweb_create_question(args, text, question_type, culture, question_langua
     """ 
 
     """
+    if not text:
+        print("No documents were given to produce a question.")
+        return None
+
     if isinstance(text, str):
         texts = [text]
     else:
@@ -174,6 +184,9 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
     else:
         question_vector = {}
 
+    if culture not in question_vector:
+        question_vector[culture] = {}
+
     knowledge_list = []
     title_list = []
     snippet_list = []
@@ -188,7 +201,12 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
     for knowledge_set in knowledge_items:
 
         if not knowledge_set or not knowledge_set.strip():
-            print("Warning: empty knowledge_set, skipping")
+            print("Warning: empty knowledge_set in some language Query (english /local), skipping")
+            missing_know = (f"Missing Knowledge'{dimension}' in '{culture}' culture:")
+            if index == 0:
+                print(missing_know + "EN")
+            else:
+                print(missing_know + "Local Language")
             continue
         
 
@@ -199,8 +217,15 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
             continue
 
         for data in item:
-            know = data.get('Knowledge') or data.get('knowledge')
-            
+            if data: 
+                know = data.get('Knowledge') or data.get('knowledge')
+                titl = data.get('Title') or data.get('title')
+                snipp = data.get('Snippet') or data.get('snippet')
+            else: 
+                know = None
+                titl = None
+                snipp = None
+
             if know:
                 know_cleaned = ", ".join(know) if isinstance(know, list) else str(know)
                 know_cleaned = know_cleaned.replace(";", ",").strip()
@@ -226,9 +251,13 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
             else:
                 snippet_list.append("EMPTY")
 
-            if "(info missing)" in title_cleaned:
+            if not titl or "(info missing)" in title_cleaned:
                 print("Added to notEnoughInfo_dimension: ",title_cleaned)
                 notEnoughInfo.append(f"{dimension} in {culture}")
+
+    print(f"El Knowledge es de: {len(knowledge_list)} unidades")
+    print("\n")
+
 
     if notEnoughInfo is not None:
         print("notEnoughInfo_dimension:", notEnoughInfo)  #this should be empty if all is working
@@ -237,35 +266,38 @@ def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, k
         question_reference = openai_create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=args.question_language)
     else: 
         question_reference= interweb_create_question(args, text=knowledge_list, question_type="factual", culture=culture, question_language=args.question_language)
+
     
-    question_reference = question_reference.split("Question:", 1)[1]
+    if question_reference is not None:
+        question_reference = question_reference.split("Question:", 1)[1]
 
-    parts = question_reference.split("Reference Answer:", 1)
+        parts = question_reference.split("Reference Answer:", 1)
 
-    question_text = parts[0].replace("Question:", "").strip()
-    
-    split_index = question_text.find("A)")
-    if split_index == -1:
-        split_index = question_text.find("a)")
+        question_text = parts[0].replace("Question:", "").strip()
+        
+        split_index = question_text.find("A)")
+        if split_index == -1:
+            split_index = question_text.find("a)")
 
-    question = question_text[:split_index].strip()
-    question_cleaned = question.replace("\n", " ")
+        question = question_text[:split_index].strip()
+        question_cleaned = question.replace("\n", " ")
 
-    abcd_options = question_text[split_index:].strip()
-    abcd_options_cleaned = abcd_options.replace("\n", " ").replace("  ", " ")
+        abcd_options = question_text[split_index:].strip()
+        abcd_options_cleaned = abcd_options.replace("\n", " ").replace("  ", " ")
 
-    reference_answer = parts[1].strip()
+        reference_answer = parts[1].strip()
 
-    if culture not in question_vector:
-        question_vector[culture] = {}
+    else:
+        question_cleaned = "EMPTY"
+        abcd_options_cleaned = "EMPTY"
+        reference_answer = "EMPTY"
+
 
     question_vector[culture][dimension] = {
         "question": question_cleaned,
         "options": abcd_options_cleaned,
         "reference_answer": reference_answer
     }
-
-
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(question_vector, f, ensure_ascii=False, indent=2)
 
