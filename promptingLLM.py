@@ -8,7 +8,7 @@ import pandas as pd
 from openai import OpenAI
 
 
-ROLE_PROMPT = f"You are an expert assistant in cultural text analysis. Your task is to read the following texts provided and extract only the relevant information related to the culture."
+ROLE_KNOWLEDGE = f"You are an expert assistant in cultural text analysis. Your task is to read the following texts provided and extract only the relevant information related to the culture."
 
 def PROMPT_KNOWLEDGE(culture, dimension, prompt_texts):
     user_prompt = f"""
@@ -78,7 +78,7 @@ def openai_create_knowledge(args, text, culture, dimension):
 
     response = client.chat.completions.create(
         model= "gpt-4o-mini", #OPENAI constant Model
-        messages=[{"role": "user", "content": ROLE_PROMPT + user_prompt}]
+        messages=[{"role": "user", "content": ROLE_KNOWLEDGE + user_prompt}]
     )
 
     content = response.choices[0].message.content
@@ -91,7 +91,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
     from a given text. Returns format: title, original snippet and knowledge extrated from
     the text. Does not invent information if there is insufficient support.
     """
-
+    
     load_dotenv()
     INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
 
@@ -112,14 +112,14 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
 
     user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
 
-    print("Interweb API is using:", args.llm_model)
+    print("     Interweb API is using:", args.llm_model)
 
     payload = {
         "model": args.llm_model,  # Replace with the model available in your API. gpt-4o-mini
         "messages": [
             {
                 "role": "system",
-                "content": ROLE_PROMPT,
+                "content": ROLE_KNOWLEDGE,
             },
             {
                 "role": "user",
