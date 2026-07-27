@@ -17,9 +17,6 @@ def knowledge_level_manager(args, timestamp, query_results):
     It manages between atomic and collective to organize knowledge generation.
     """
 
-    resultados = [] 
-
-
     culture_dfs = {} 
     
     for key, info in query_results.items():
@@ -71,7 +68,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                         if args.api == "openai":
                             knowledge_text= openai_create_knowledge(args, text=content, culture=culture, dimension=dimension)
                         else:
-                            knowledge_text = interweb_create_knowledge(text=content, culture=culture, dimension=dimension)#
+                            knowledge_text = interweb_create_knowledge(text=content, culture=culture, dimension=dimension) #Atomic
                             #IF here it says something about (info missing) it should look for more docs
 
                         knowledge_output.append(knowledge_text)   
@@ -80,7 +77,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                     if count_by_language == 3:
                         break
 
-
+                print("\n")
                 print(f"For key {key} in {lang}:")
 
                 count += count_by_language
@@ -110,8 +107,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                 if args.api == "openai":
                     knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
                 else:
-                    just_one = knowledge_input_cache[0]
-                    knowledge_text = interweb_create_knowledge(args, text=just_one, culture=culture, dimension=dimension)
+                    knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension) #Collective
 
                 if knowledge_text is None:
                     knowledge_text = ""
@@ -122,10 +118,11 @@ def knowledge_level_manager(args, timestamp, query_results):
                 print("HPPPPPPPPPTA",knowledge_text_cleaned)
 
                 knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
+
                 count += count_by_language
                 knowledge_input.append(knowledge_input_cache)   #Input storage for each language
 
-            print(f"({count}/{args.max_results})")
+            # print(f"({count}/{args.max_results}) documents as input in both languages") #(6/5) documents as input in both languages
             if count < args.max_results:
                print(f"DOCS MISSING {count}/{args.max_results}")
 
