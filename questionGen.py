@@ -93,7 +93,7 @@ def openai_create_question(text, question_type, culture, question_language):
 
     response = client.chat.completions.create(
         model="gpt-4.1-mini",   #OPENAI constant Model
-        messages=[{"role": "user", "content": ROLE_PROMPT + prompt}]
+        messages=[{"role": "user", "content": ROLE_QUESTION + prompt}]
     )
 
     content = response.choices[0].message.content
@@ -145,7 +145,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
         "messages": [
             {
                 "role": "system",
-                "content": ROLE_PROMPT,
+                "content": ROLE_QUESTION,
             },
             {
                 "role": "user",
@@ -154,20 +154,66 @@ def interweb_create_question(args, text, question_type, culture, question_langua
         ]
     }
 
-    response = requests.post(
-        f"{url}/v1/chat/completions",
-        headers=headers,
-        json=payload,
-        timeout=60
-    )
+    try:
+            
+        response = requests.post(
+            f"{url}/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
 
-    if response.status_code != 200:
-        print("Error:", response.status_code, response.text)
-    else:
-        return response.json()["choices"][0]["message"]["content"]
+        if response.status_code != 200:
+            print("Error:", response.status_code, response.text)
+
+            if retries > 0:
+                print(f"Retrying... attempts left: {retries}")
+                return interweb_create_question(
+                    args, 
+                    text, 
+                    question_type, 
+                    culture, 
+                    question_language, 
+                    retries - 1
+                )   
+
+            return None
+        
+        answer = response.json()["choices"][0]["message"]["content"]
+
+        if answer is None or "[]" in answer or answer.strip() == "":
+            if retries > 0:
+                print(f"Empty response. Retrying... attempts left: {retries}")
+                return interweb_create_question(
+                    args, 
+                    text, 
+                    question_type, 
+                    culture, 
+                    question_language, 
+                    retries - 1
+                )
+
+            return None
+
+        return answer
+    
+    except requests.exceptions.RequestException as e:
+        print("Request failed:", e)
+
+        if retries > 0:
+            return interweb_create_question(
+                args, 
+                text, 
+                question_type, 
+                culture, 
+                question_language, 
+                retries - 1
+            )
+
+        return None
 
 
-def knowledge_to_question(args, knowledge_path, culture, dimension, timestamp, knowledge_output_dict):
+def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
     '''This function separates title, snippet and knowledge from the knowledge_path and clean them. and separates them into lists to better visualization and data control to create a question.
     It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
     It creates at the end the question_reference_{timestamp}.json file with the question, options and reference answer.
