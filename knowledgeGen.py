@@ -114,8 +114,8 @@ def knowledge_level_manager(args, timestamp, query_results):
 
                 knowledge_text_cleaned= json_cleanig(knowledge_text)
 
-
-                print("HPPPPPPPPPTA",knowledge_text_cleaned)
+                if not knowledge_text_cleaned: 
+                    print(f"    NO KNOWLEDGE FOR: {key} - {lang}")
 
                 knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
 
