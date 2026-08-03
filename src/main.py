@@ -48,7 +48,14 @@ parser.add_argument(
     "--llm_model",
     choices=["gpt-4.1-mini", "gemma3:27b", "qwen3.6:35b", "llama3:70b", "deepseek-r1:32b"],
     default="gpt-4.1-mini", 
-    help="LLM model which is going to be used for knowledge and questions creation",
+    help="which LLM model is going to be used for knowledge and questions creation",
+)
+
+parser.add_argument(
+    "--difficulty",
+    choices=["factual", "conceptual", "misleading", "multihop"],
+    default="factual", 
+    help="Which kind of question's type is created",
 )
 
 args = parser.parse_args()
