@@ -1,4 +1,5 @@
 import re
+import random
 
 from openai import OpenAI
 import json
@@ -16,14 +17,115 @@ QUESTION_TYPES = {
 
 ROLE_QUESTION = "You are an expert educational assessment designer specialized in cultural knowledge evaluation. Your task is to create accurate multiple-choice questions from provided cultural information. You design assessment items that evaluate understanding, reasoning, and interpretation of cultural traits. You must ensure questions are clear, unbiased, and supported by the provided context."
 
-def PROMPT_QUESTION(idiom, instruction, prompt_texts):
+def random_llm(selected_format):
+
+    randomness_prompt = ""
+
+    if selected_format == "single_choice":
+        reference= random.choice(["A","B","C","D"])
+        randomness_prompt = f"""
+            The correct answer must be the option: {reference}
+        """
+    elif selected_format== "true_false":
+        reference= random.choice(["True","False"])
+        randomness_prompt = f"""
+            The correct answer must be the option: {reference}
+            For True and False questions tailor your question to match this.
+        """
+
+    return randomness_prompt
+     
     
+
+
+def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
+
+    question_formats = {
+
+        "single_choice": """
+        Question: {question}
+
+        A) {option_a}
+        B) {option_b}
+        C) {option_c}
+        D) {option_d}
+
+        Reference Answer: {answer}
+        """,
+
+        "true_false": """
+        Question: {question}
+
+        Reference Answer: {answer}
+        """,
+
+        "fill_the_blank": """
+        Question: Complete the sentence:
+
+        {question}
+
+        Reference Answer: {answer}
+        """,
+
+        "short_answer": """
+        Question: {question}
+
+        Reference Answer: {answer}
+
+        Expected answer length: 1-3 sentences
+        """,
+
+        "long_answer": """
+        Question: {question}
+
+        Reference Answer:
+        {answer}
+
+        Expected answer:
+        Explain the reasoning step by step.
+        """
+    }
+
+    question_types = {
+        "factual": 
+            [
+                "single_choice",
+                "true_false",
+                "fill_the_blank"
+            ],
+
+        "conceptual": 
+            [
+                "single_choice",
+                "true_false",
+            ],
+
+        "misleading": 
+            [
+                "single_choice",
+                "true_false",
+                "short_answer_question"
+            ],
+
+        "multihop": 
+            [
+                "long_answer_question"
+            ],
+    }
+
+    permited_question_types = question_types[question_type]
+
+    random.seed(42)
+
+    selected_format = random.choice(permited_question_types)
+
+    question_format = question_formats[selected_format]
+
+
     prompt = f"""
-        Task: Answer in {idiom}.
+        Task: Answer in {language}.
         Instruction:
         {instruction}
-        The correct answer must be randomly placed among A, B, C, and D.
-        The position of the correct answer should vary across generated questions.
 
         Questions have to be clear.
         The options should be plausible but misleading distractors.
@@ -40,16 +142,15 @@ def PROMPT_QUESTION(idiom, instruction, prompt_texts):
         {prompt_texts}
         
         The question should be in the following format:
-        Question: ...
-        A) ...
-        B) ...
-        C) ...
-        D) ...
+        {question_format}
 
-        Reference Answer: X
         """
-    return prompt
 
+    if selected_format == "single_choice" or "true_false":
+        random_feature= random_llm(selected_format)
+        prompt = prompt + random_feature
+   
+    return prompt
 
 def openai_create_question(text, question_type, culture, question_language):
     """
@@ -79,13 +180,13 @@ def openai_create_question(text, question_type, culture, question_language):
             "italian": "Italian",
             "german": "German"}
 
-        idiom = local_dictionary.get(culture.lower(), "English")
+        language = local_dictionary.get(culture, "English")
     else:        
-        idiom = "English"
+        language = "English"
 
     instruction = QUESTION_TYPES[question_type]
 
-    prompt= PROMPT_QUESTION(idiom, instruction, prompt_texts)
+    prompt= PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
 
     load_dotenv()
 
@@ -122,13 +223,13 @@ def interweb_create_question(args, text, question_type, culture, question_langua
             "italian": "Italian",
             "german": "German"}
 
-        idiom = local_dictionary.get(culture.lower(), "English")
+        language = local_dictionary.get(culture, "English")
     else:        
-        idiom = "English"
+        language = "English"
 
     instruction = QUESTION_TYPES[question_type]
 
-    prompt= PROMPT_QUESTION(idiom, instruction, prompt_texts)
+    prompt= PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
 
     load_dotenv()
     INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
@@ -306,9 +407,9 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
         print("notEnoughInfo_dimension:", notEnoughInfo)  #this should be empty if all is working
 
     if args.api == "openai":
-        question_reference = openai_create_question(text=knowledge_list, question_type="factual", culture=culture, question_language=args.question_language)
+        question_reference = openai_create_question(text=knowledge_list, question_type=args.difficulty, culture=culture, question_language=args.question_language)
     else: 
-        question_reference= interweb_create_question(args, text=knowledge_list, question_type="factual", culture=culture, question_language=args.question_language)
+        question_reference= interweb_create_question(args, text=knowledge_list, question_type=args.difficulty, culture=culture, question_language=args.question_language)
 
     
     if question_reference is not None:
@@ -316,7 +417,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
 
         parts = question_reference.split("Reference Answer:", 1)
 
-        question_text = parts[0].replace("Question:", "").strip()
+        question_text = parts[0].replace("Question:", "").replace("Options:", "").strip()
         
         split_index = question_text.find("A)")
         if split_index == -1:
