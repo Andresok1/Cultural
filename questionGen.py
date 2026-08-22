@@ -394,31 +394,127 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
     if notEnoughInfo is not None:
         print("notEnoughInfo_dimension:", notEnoughInfo)  #this should be empty if all is working
 
-    if args.api == "openai":
-        question_reference = openai_create_question(text=knowledge_list, question_type=args.difficulty, culture=culture, question_language=args.question_language)
-    else: 
-        question_reference= interweb_create_question(args, text=knowledge_list, question_type=args.difficulty, culture=culture, question_language=args.question_language)
+    return  knowledge_list, title_list, snippet_list
 
+def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
+    '''This function separates title, snippet and knowledge from the knowledge_path and clean them. and separates them into lists to better visualization and data control to create a question.
+    It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
+    It creates at the end the question_reference_{timestamp}.json file with the question, options and reference answer.
+
+    return:
+    question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list, selected_format
+    '''
+    output_path = f"results/questions.json"
+            
     
+    if os.path.exists(output_path):
+        with open(output_path, "r", encoding="utf-8") as f:
+            question_vector = json.load(f)
+    else:
+        question_vector = {}
+
+    if culture not in question_vector:
+        question_vector[culture] = {}
+
+    if dimension not in question_vector[culture]:
+        question_vector[culture][dimension] = {}
+
+
+    if args.api == "openai":
+        result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
+    else: 
+        result = interweb_create_question(args, text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
+
+    if result is None:
+        print("Warning: No question generated for this knowledge set.")
+        selected_format = None
+        question_reference = None
+    else: 
+        question_reference, selected_format = result
+
+    #for each question type there is a differnet format to follow
     if question_reference is not None:
-        question_reference = question_reference.split("Question:", 1)[1]
 
-        parts = question_reference.split("Reference Answer:", 1)
+        if selected_format == "single_choice":
+            question_reference = question_reference.split("Question:", 1)[1]
 
-        question_text = parts[0].replace("Question:", "").replace("Options:", "").strip()
+            parts = question_reference.split("Reference Answer:", 1)
+
+            question_text = parts[0].replace("Question:", "").replace("Options:", "").strip()
+            
+            split_index = question_text.find("A)")
+            if split_index == -1:
+                split_index = question_text.find("a)")
+
+            question = question_text[:split_index].strip()
+            question_cleaned = question.replace("\n", " ")
+
+            abcd_options = question_text[split_index:].strip()
+            abcd_options_cleaned = abcd_options.replace("\n", " ").replace("  ", " ")
+
+            reference_answer = parts[1].strip()
+
+        if selected_format == "true_false":
+            question_reference = question_reference.split("Question:", 1)[1]
+
+            question_part, reference_answer = question_reference.split(
+                "Reference Answer:", 1
+            )
+
+            question_text, _ = question_part.split("Options:", 1)
+
+            question_cleaned = " ".join(question_text.split())
+
+            abcd_options_cleaned = "NA"
+
+            reference_answer = " ".join(reference_answer.split())
         
-        split_index = question_text.find("A)")
-        if split_index == -1:
-            split_index = question_text.find("a)")
+        if selected_format == "fill_the_blank":
+            question_reference = question_reference.split("Question:", 1)[1]
 
-        question = question_text[:split_index].strip()
-        question_cleaned = question.replace("\n", " ")
+            question_part, reference_answer = question_reference.split(
+                "Reference Answer:", 1
+            )
 
-        abcd_options = question_text[split_index:].strip()
-        abcd_options_cleaned = abcd_options.replace("\n", " ").replace("  ", " ")
+            question_text, _ = question_part.split("Options:", 1)
 
-        reference_answer = parts[1].strip()
+            question_cleaned = " ".join(question_text.split())
 
+            abcd_options_cleaned = "NA"
+
+            reference_answer = " ".join(reference_answer.split())
+
+        if selected_format == "short_answer":
+
+            question_reference = question_reference.split("Question:", 1)[1]
+
+            question_part, reference_answer = question_reference.split(
+                "Reference Answer:", 1
+            )
+
+            question_text, _ = question_part.split("Options:", 1)
+
+            question_cleaned = " ".join(question_text.split())
+
+            abcd_options_cleaned = "NA"
+
+            reference_answer = " ".join(reference_answer.split())
+
+        if selected_format == "long_answer":
+
+            question_reference = question_reference.split("Question:", 1)[1]
+
+            question_part, reference_answer = question_reference.split(
+                "Reference Answer:", 1
+            )
+
+            question_text, _ = question_part.split("Options:", 1)
+
+            question_cleaned = " ".join(question_text.split())
+
+            abcd_options_cleaned = "NA"
+
+            reference_answer = " ".join(reference_answer.split())
     else:
         question_cleaned = "EMPTY"
         abcd_options_cleaned = "EMPTY"
