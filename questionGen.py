@@ -602,17 +602,17 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, 
             })
 
 
-    ### .CSV preparation and saving 
-    df = pd.concat([df_dimension.reset_index(drop=True),
-                    df_knowledge_info.reset_index(drop=True),
-                    df_questions_reference.reset_index(drop=True)], axis=1)
+        ### .CSV preparation and saving 
+        df = pd.concat([df_dimension.reset_index(drop=True),
+                        df_knowledge_info.reset_index(drop=True),
+                        df_questions_reference.reset_index(drop=True)], axis=1)
 
-    culture_dfs[culture].append(df)
+        culture_dfs[culture].append(df)
 
 
-    for culture, dfs in culture_dfs.items():
-        if dfs:  
-            final_df = pd.concat(dfs, ignore_index=True)
-            final_df.to_csv(f"results/{culture}_Knowledge_QA.csv", index=False, encoding="utf-8-sig")
-        else:
-            print(f"Warning: No data to save for culture {culture}")
+        for culture, dfs in culture_dfs.items():
+            if dfs:  
+                final_df = pd.concat(dfs, ignore_index=True)
+                final_df.to_csv(f"results/{culture}_Knowledge_QA.csv", index=False, encoding="utf-8-sig")
+            else:
+                print(f"Warning: No data to save for culture {culture}")
