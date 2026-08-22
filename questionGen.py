@@ -521,15 +521,27 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
         reference_answer = "EMPTY"
 
 
-    question_vector[culture][dimension] = {
-        "question": question_cleaned,
-        "options": abcd_options_cleaned,
-        "reference_answer": reference_answer
-    }
+    if typ not in question_vector[culture][dimension]:
+        key = f"{typ} - {selected_format}"
+        question_vector[culture][dimension][key] = []
+
+    if selected_format == "single_choice":
+        question_vector[culture][dimension][key].append({
+            "question": question_cleaned,
+            "options": abcd_options_cleaned,
+            "reference_answer": reference_answer    
+        })
+    else:
+        question_vector[culture][dimension][f"{typ} - {selected_format}"].append( {
+            "question": question_cleaned,
+            "reference_answer": reference_answer
+        })
+
+
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(question_vector, f, ensure_ascii=False, indent=2)
 
-    return question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
+    return question_cleaned, abcd_options_cleaned, reference_answer, selected_format
 
 
 
@@ -539,44 +551,55 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, 
         None.
     '''
 
+    knowledge_list, title_list, snippet_list= knowledge_preparing(args, culture, dimension, knowledge_output_dict)
 
-    question, abcd_options, reference_answer, knowledge_list, title_list, snippet_list, = knowledge_to_question(args, culture, dimension, knowledge_output_dict)
+    if args.question_type == "all":
+        types = ["factual", "conceptual", "misleading", "multihop"]
+    else: 
+        types = [args.question_type]
 
-    output_path = f"results/knowledge_output_{timestamp}.json"
+    for typ in types:
+        question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension, knowledge_list, typ)
 
-    if os.path.exists(output_path):
-        with open(output_path, "r", encoding="utf-8") as f:
-            knowledge_vector = json.load(f)
-    else:
-        knowledge_vector = {}
+        output_path = f"results/knowledge_output_{timestamp}.json"
 
-    df_dimension = pd.DataFrame([{"culture": culture, "dimension": dimension}])
+        if os.path.exists(output_path):
+            with open(output_path, "r", encoding="utf-8") as f:
+                knowledge_vector = json.load(f)
+        else:
+            knowledge_vector = {}
+
+        df_dimension = pd.DataFrame([{"culture": culture, "dimension": dimension}])
+
+        data_knowledge_info = {}    #TODO: The structure can be in groups of 3. 
+        for i, (t, s, k) in enumerate(zip(title_list, snippet_list, knowledge_list), start=1):
+            data_knowledge_info[f"title_{i}"] = [t]
+            data_knowledge_info[f"snippet_{i}"] = [s]
+            data_knowledge_info[f"knowledge_{i}"] = [k]
+
+        df_knowledge_info = pd.DataFrame(data_knowledge_info)
+
+        if culture not in knowledge_vector:
+            knowledge_vector[culture] = {}
 
 
+        knowledge_vector[culture][dimension] = data_knowledge_info
 
-    data_knowledge_info = {}    #TODO: The structure can be in groups of 3. 
-    for i, (t, s, k) in enumerate(zip(title_list, snippet_list, knowledge_list), start=1):
-        data_knowledge_info[f"title_{i}"] = [t]
-        data_knowledge_info[f"snippet_{i}"] = [s]
-        data_knowledge_info[f"knowledge_{i}"] = [k]
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(knowledge_vector, f, ensure_ascii=False, indent=2)
 
-    df_knowledge_info = pd.DataFrame(data_knowledge_info)
-
-    if culture not in knowledge_vector:
-        knowledge_vector[culture] = {}
-
-
-    knowledge_vector[culture][dimension] = data_knowledge_info
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(knowledge_vector, f, ensure_ascii=False, indent=2)
-
-    ### QUESTION PREPARATION 
-    df_questions_reference = pd.DataFrame({
-        "question": [question],
-        "abcd_options": [abcd_options],
-        "reference_answer": [reference_answer]
-    })
+        ### QUESTION PREPARATION 
+        if selected_format == "single_choice":
+            df_questions_reference = pd.DataFrame({
+                "question": [question],
+                "abcd_options": [abcd_options],
+                "reference_answer": [reference_answer]
+            })
+        else:  
+            df_questions_reference = pd.DataFrame({
+                "question": [question],
+                "reference_answer": [reference_answer]
+            })
 
 
     ### .CSV preparation and saving 
