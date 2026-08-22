@@ -44,7 +44,7 @@ def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
 
         "single_choice": """
         Question: {question}
-
+        Options:
         A) {option_a}
         B) {option_b}
         C) {option_c}
@@ -54,35 +54,30 @@ def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
         """,
 
         "true_false": """
-        Question: {question}
-
+        Question: Is the following statement true or false? {question}
+        Options: "NA"
         Reference Answer: {answer}
         """,
 
         "fill_the_blank": """
-        Question: Complete the sentence:
-
-        {question}
-
+        Question: Complete the sentence: {question}
+        Options: "NA"
         Reference Answer: {answer}
         """,
 
         "short_answer": """
-        Question: {question}
-
+        Question: Write a short essay answering the following question. Expected answer length: 3-5 sentences. {question}. 
+        Options: "NA"
         Reference Answer: {answer}
 
-        Expected answer length: 1-3 sentences
         """,
 
         "long_answer": """
-        Question: {question}
-
+        Question: Write an essay answering the following question and also explain the reasoning step by step. Expected answer length: 5-8 sentences. {question}
+        Options: "NA"
         Reference Answer:
         {answer}
 
-        Expected answer:
-        Explain the reasoning step by step.
         """
     }
 
@@ -104,18 +99,18 @@ def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
             [
                 "single_choice",
                 "true_false",
-                "short_answer_question"
+                "short_answer"
             ],
 
         "multihop": 
             [
-                "long_answer_question"
+                "long_answer"
             ],
-    }
+    }   
 
     permited_question_types = question_types[question_type]
 
-    random.seed(42)
+    random.seed()
 
     selected_format = random.choice(permited_question_types)
 
@@ -133,24 +128,25 @@ def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
         Reference Answer must indicate the correct option.
 
         Note:
-        1. The question should avoid explicitly mentioning cultural concepts, terminology,
-        or characteristics, in order to effectively assess the student’s understanding
-        of cultural traits.
+        1. The question should avoid explicitly mentioning cultural concepts, terminology, or characteristics, in order to effectively assess the student’s understanding of cultural traits.
         2. A reference answer should be provided after the question.
-        3. Do not change the structure of "Question", "Options" and "Reference Answer" in the output, as they will be used for evaluation. Just fill in the content after these labels.
+        3. Do not change the structure of format given. Just fill in the content after these labels.
         Context:
         {prompt_texts}
         
+        Question type is: {selected_format}
         The question should be in the following format:
         {question_format}
 
         """
+    print("question type:", question_type)
+    print("format:", selected_format)
 
-    if selected_format == "single_choice" or "true_false":
+    if selected_format == "single_choice" or  selected_format == "true_false":
         random_feature= random_llm(selected_format)
         prompt = prompt + random_feature
-   
-    return prompt
+    
+    return prompt, selected_format
 
 def openai_create_question(text, question_type, culture, question_language):
     """
