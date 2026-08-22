@@ -180,9 +180,12 @@ def openai_create_question(text, question_type, culture, question_language):
     else:        
         language = "English"
 
+    if question_type == "random":
+        question_type = random.choice(list(QUESTION_TYPES.keys()))
+
     instruction = QUESTION_TYPES[question_type]
 
-    prompt= PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
+    prompt, selected_format= PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
 
     load_dotenv()
 
@@ -194,7 +197,7 @@ def openai_create_question(text, question_type, culture, question_language):
     )
 
     content = response.choices[0].message.content
-    return content
+    return content, selected_format
 
 def interweb_create_question(args, text, question_type, culture, question_language, retries=5):
     """ 
@@ -223,9 +226,12 @@ def interweb_create_question(args, text, question_type, culture, question_langua
     else:        
         language = "English"
 
+    if question_type == "random":
+        question_type = random.choice(list(QUESTION_TYPES.keys()))
+
     instruction = QUESTION_TYPES[question_type]
 
-    prompt= PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
+    prompt, selected_format = PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
 
     load_dotenv()
     INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
@@ -292,7 +298,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
 
             return None
 
-        return answer
+        return answer, selected_format
     
     except requests.exceptions.RequestException as e:
         print("Request failed:", e)
