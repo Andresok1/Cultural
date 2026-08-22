@@ -60,16 +60,16 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-# csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
-# df = pd.read_csv(csv_path)
-# dimensions = df["Fine-grained Dimension"].tolist()
+csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
+df = pd.read_csv(csv_path)
+dimensions = df["Fine-grained Dimension"].tolist()
 
-# dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
-dimensions= [
-    # "tax & accounting",
-    # "measuring system",
-    "tipical food",
-]
+dimensions= random.sample(dimensions, 1)        #JUST TO TESTING
+# dimensions= [
+#     # "tax & accounting",
+#     # "measuring system",
+#     "tipical food",
+# ]
 
 timestamp = datetime.now().strftime("%m%d_%H%M")
 
@@ -81,7 +81,7 @@ for file_path in glob.glob(os.path.join(results_folder, "*")):
     
 cultures= [
     "Colombian",
-    "German",
+    # "German",
     # "Italian",
 ]
 
