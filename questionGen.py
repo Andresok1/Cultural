@@ -20,7 +20,7 @@ ROLE_QUESTION = "You are an expert educational assessment designer specialized i
 def random_llm(selected_format):
 
     randomness_prompt = ""
-
+    reference = "EMPTY"
     if selected_format == "single_choice":
         reference= random.choice(["A","B","C","D"])
         randomness_prompt = f"""
@@ -32,7 +32,7 @@ def random_llm(selected_format):
             The correct answer must be the option: {reference}
             For True and False questions tailor your question to match this.
         """
-
+    print("Reference answer:", reference)
     return randomness_prompt
      
     
