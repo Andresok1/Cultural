@@ -316,25 +316,10 @@ def interweb_create_question(args, text, question_type, culture, question_langua
         return None
 
 
-def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
-    '''This function separates title, snippet and knowledge from the knowledge_path and clean them. and separates them into lists to better visualization and data control to create a question.
+def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
+    '''This function prepares the knowledge data to deliver it as knowledge_list to gerenate the question afterwards.
     It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
-    It creates at the end the question_reference_{timestamp}.json file with the question, options and reference answer.
-
-    return:
-    question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list
     '''
-    output_path = f"results/questions.json"
-    
-
-    if os.path.exists(output_path):
-        with open(output_path, "r", encoding="utf-8") as f:
-            question_vector = json.load(f)
-    else:
-        question_vector = {}
-
-    if culture not in question_vector:
-        question_vector[culture] = {}
 
     knowledge_list = []
     title_list = []
@@ -363,6 +348,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_output_dict):
             item = json.loads(knowledge_set)  # it converts the string back to a dictionary 
         except json.JSONDecodeError:
             print(f"Warning: invalid JSON, skipping: {knowledge_set[:50]}...")
+            notEnoughInfo.append(f"{dimension} in {culture}")
             continue
 
         for data in item:
