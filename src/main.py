@@ -98,7 +98,7 @@ for culture in cultures:
 
         key = f"{culture}_{dimension}"
 
-        base_query = f"{dimension} in {culture}"
+        base_query = f"{dimension} in {culture} culture"
         queries = {
             "en": base_query
         }
