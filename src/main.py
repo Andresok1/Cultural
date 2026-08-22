@@ -52,8 +52,8 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--difficulty",
-    choices=["factual", "conceptual", "misleading", "multihop"],
+    "--question_type",
+    choices=["factual", "conceptual", "misleading", "multihop", "random", "all"],
     default="factual", 
     help="Which kind of question's type is created",
 )
