@@ -33,6 +33,7 @@ def random_llm(selected_format):
             For True and False questions tailor your question to match this.
         """
     print("Reference answer:", reference)
+    print("\n")
     return randomness_prompt
      
     
@@ -314,6 +315,236 @@ def interweb_create_question(args, text, question_type, culture, question_langua
             )
 
         return None
+
+def openrouter_create_knowledge(args, text, question_type, culture, dimension, question_language, retries=5):
+
+    if not text:
+            print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
+
+            return None
+
+    if isinstance(text, str):
+        texts = [text]
+    else:
+        texts = text
+
+    prompt_texts = "\n\n".join([f"Context {i}:\n{text}" for i, text in enumerate(texts, 1)])
+
+    if question_language == "local":
+         
+        local_dictionary = {
+            "colombian": "Spanish",
+            "italian": "Italian",
+            "german": "German"}
+
+        language = local_dictionary.get(culture, "English")
+    else:        
+        language = "English"
+
+    if question_type == "random":
+        question_type = random.choice(list(QUESTION_TYPES.keys()))
+
+    instruction = QUESTION_TYPES[question_type]
+
+    prompt, selected_format = PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
+
+    load_dotenv()
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+    url = "https://openrouter.ai"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}"
+    }
+
+    data = {
+        "model": f"openai/{args.llm_model}",
+        "messages": [
+            {
+                "role": "system",
+                "content": ROLE_QUESTION,
+            },
+            {
+                "role": "user",
+                "content": f"{prompt}\n"
+            }
+        ]
+    }
+
+    response = requests.post(
+        f"{url}/api/v1/chat/completions",
+        headers=headers,
+        json=data,
+        timeout=60
+    )
+
+    response.raise_for_status()
+
+    answer = response.json()["choices"][0]["message"]["content"]
+
+    return answer, selected_format
+
+
+# def openrouter_create_question(
+#     args,
+#     text,
+#     question_type,
+#     culture,
+#     question_language,
+#     retries=5
+# ):
+#     """
+#     Generates questions using OpenRouter API.
+#     """
+
+#     load_dotenv()
+
+#     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+#     url = "https://openrouter.ai/api/v1/chat/completions"
+
+#     headers = {
+#         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+#         "Content-Type": "application/json",
+#         "HTTP-Referer": "https://your-project-url.com",
+#         "X-Title": "Question Generation Pipeline"
+#     }
+
+
+#     user_prompt = PROMPT_QUESTION(
+#         question_type,
+#         culture,
+#         question_language,
+#         text
+#     )
+
+
+#     print("     OpenRouter API is using:", args.llm_model)
+
+
+#     payload = {
+#         "model": args.llm_model,
+#         "messages": [
+#             {
+#                 "role": "system",
+#                 "content": ROLE_QUESTION
+#             },
+#             {
+#                 "role": "user",
+#                 "content": user_prompt
+#             }
+#         ],
+#         "temperature": 0.3,
+#         "max_tokens": 2048
+#     }
+
+
+#     try:
+
+#         response = requests.post(
+#             url,
+#             headers=headers,
+#             json=payload,
+#             timeout=120
+#         )
+
+
+#         # Debug útil
+#         print("Status:", response.status_code)
+
+#         if response.status_code != 200:
+#             print("OpenRouter error:")
+#             print(response.text)
+
+#             if retries > 0:
+#                 print(
+#                     f"Retrying... attempts left: {retries}"
+#                 )
+
+#                 return openrouter_create_question(
+#                     args,
+#                     text,
+#                     question_type,
+#                     culture,
+#                     question_language,
+#                     retries - 1
+#                 )
+
+#             return None
+
+
+#         data = response.json()
+
+
+#         # Comprobar que existe respuesta
+#         if (
+#             "choices" not in data
+#             or len(data["choices"]) == 0
+#         ):
+#             print("Empty choices response:")
+#             print(data)
+
+#             if retries > 0:
+#                 return openrouter_create_question(
+#                     args,
+#                     text,
+#                     question_type,
+#                     culture,
+#                     question_language,
+#                     retries - 1
+#                 )
+
+#             return None
+
+
+#         answer = (
+#             data["choices"][0]
+#             ["message"]
+#             ["content"]
+#         )
+
+
+#         if (
+#             answer is None
+#             or answer.strip() == ""
+#         ):
+#             print("Empty answer received")
+
+#             if retries > 0:
+#                 return openrouter_create_question(
+#                     args,
+#                     text,
+#                     question_type,
+#                     culture,
+#                     question_language,
+#                     retries - 1
+#                 )
+
+#             return None
+
+
+#         print("     DONE: questions created")
+
+#         return answer
+
+
+
+#     except requests.exceptions.RequestException as e:
+
+#         print("Request failed:", e)
+
+#         if retries > 0:
+#             return openrouter_create_question(
+#                 args,
+#                 text,
+#                 question_type,
+#                 culture,
+#                 question_language,
+#                 retries - 1
+#             )
+
+#         return None
 
 
 def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
