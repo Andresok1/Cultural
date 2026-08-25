@@ -193,7 +193,74 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
             )
 
         return None
-        
+
+def openrouter_create_knowledge(args, text, culture, dimension, retries=5):
+
+    load_dotenv()
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+    url = "https://openrouter.ai"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}"
+    }
+
+    print(f"XXXXXXXXXXXXX Número de ENTRADAS de KNOWLEDGE: {len(text)}")
+    
+    if not text:
+        print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
+        return None
+
+    if isinstance(text, str):
+        texts = [text]
+    else:
+        texts = text
+
+    prompt_texts = "\n\n".join([f"Text {i}:\n{text}" for i, text in enumerate(texts, 1)])
+
+    user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
+
+    print(f"     OPENROUTER API is using: {args.llm_model}")
+
+    data = {
+        "model": f"openai/{args.llm_model}",  # Replace with the model available in your API. gpt-4o-mini
+        "messages": [
+            {
+                "role": "system",
+                "content": ROLE_KNOWLEDGE,
+            },
+            {
+                "role": "user",
+                "content": f"{user_prompt}\n"
+            }
+        ]
+    }
+
+    response = requests.post(
+        f"{url}/api/v1/chat/completions",
+        headers=headers,
+        json=data,
+        timeout=60
+    )
+
+    response.raise_for_status()
+
+    response_json = response.json()
+
+    # print("OPENROUTER RESPONSE:")
+    # print(response_json)
+
+    answer = response.json()["choices"][0]["message"]["content"]
+
+    if not answer or not answer.strip():
+        print("WARNING: Empty answer from OpenRouter")
+        return None
+
+
+    return answer
+
+
 
 def interweb_model_list():
     API_KEY = "yMbyBst2N4RBPIY8UJAxMFBdzUiaLM1bBoskkitspjxmszNcva8IkKb8tO0OHI0C"
