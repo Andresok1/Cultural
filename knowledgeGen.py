@@ -1,15 +1,21 @@
 import json
 import os
-import re
 
-from dotenv import load_dotenv
 from questionGen import csv_saver
-from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge
-from deep_translator import GoogleTranslator
+from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge
+from deep_translator import MyMemoryTranslator
 
 def translate(text, target_lang):
-    return GoogleTranslator(source="en", target=target_lang).translate(text)
-
+    try:
+        answer= MyMemoryTranslator(
+            source="english",
+            target=target_lang
+        ).translate(text) 
+        # print(answer)
+        return answer
+    except Exception as e:
+        print(e)
+        return text
 
 
 def knowledge_level_manager(args, timestamp, query_results):
