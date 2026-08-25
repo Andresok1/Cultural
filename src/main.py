@@ -39,15 +39,15 @@ parser.add_argument(
 
 parser.add_argument(
     "--api",
-    choices=["openai", "interweb"],
+    choices=["openai", "interweb", "openrouter"],
     default="interweb",
     help="API which is going to be used for knowledge and questions creation",
 )
 
 parser.add_argument(
     "--llm_model",
-    choices=["gpt-4.1-mini", "gemma3:27b", "qwen3.6:35b", "llama3:70b", "deepseek-r1:32b"],
-    default="gpt-4.1-mini", 
+    choices=["gpt-4.1-mini", "gpt-4o"],
+    default="gpt-4o", 
     help="which LLM model is going to be used for knowledge and questions creation",
 )
 
