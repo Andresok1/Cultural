@@ -564,22 +564,23 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
     print(f"Procesing question to '{dimension}' in '{culture}'") 
 
     
-    for index, knowledge_set in enumerate(knowledge_items):
+    for lang, knowledge_set in knowledge_items.items():
 
-        if not knowledge_set or not knowledge_set.strip():
+        if (
+        knowledge_set is None
+        or knowledge_set == []
+        or (isinstance(knowledge_set, str) and not knowledge_set.strip())
+        ):
             print("Warning: empty knowledge_set in some language Query (english /local), skipping")
-            missing_know = (f"Missing Knowledge'{dimension}' in '{culture}' culture:")
-            if index == 0:
-                print(missing_know + "EN")
-            else:
-                print(missing_know + "Local Language")
+            missing_know = (f"Missing Knowledge'{dimension}' in '{culture}' culture: {lang} language.")
+            notEnoughInfo.append(f"{dimension} in {culture} ({lang})")
+
             continue
 
         try:
             item = json.loads(knowledge_set)  # it converts the string back to a dictionary 
         except json.JSONDecodeError:
             print(f"Warning: invalid JSON, skipping: {knowledge_set[:50]}...")
-            notEnoughInfo.append(f"{dimension} in {culture}")
             continue
 
         for data in item:
