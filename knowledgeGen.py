@@ -58,7 +58,8 @@ def knowledge_level_manager(args, timestamp, query_results):
 
         knowledge_output= []    #For each Query
         knowledge_input= []
-        
+        knowledge_input_dicc = {}
+        knowledge_output_dicc = {}
         count = 0
         
         if args.knowledge_level == "atomic":
@@ -124,9 +125,11 @@ def knowledge_level_manager(args, timestamp, query_results):
                     print(f"    NO KNOWLEDGE FOR: {key} - {lang}")
 
                 knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
+                knowledge_output_dicc[lang] = knowledge_text_cleaned
 
                 count += count_by_language
                 knowledge_input.append(knowledge_input_cache)   #Input storage for each language
+                knowledge_input_dicc[lang] = knowledge_input_cache
 
             # print(f"({count}/{args.max_results}) documents as input in both languages") #(6/5) documents as input in both languages
             if count < args.max_results:
@@ -140,9 +143,11 @@ def knowledge_level_manager(args, timestamp, query_results):
         if culture not in knowledge_input_dict:
             knowledge_input_dict[culture] = {}
 
-        knowledge_output_dict[culture][dimension] = knowledge_output   
+ 
+        knowledge_output_dict[culture][dimension] = knowledge_output_dicc
 
-        knowledge_input_dict[culture][dimension] = knowledge_input 
+        knowledge_input_dict[culture][dimension] = knowledge_input_dicc
+
 
         with open(output_path, "w", encoding="utf-8") as f:     #Save knowledge_output (RAW knowledge)
             json.dump(knowledge_output_dict, f, ensure_ascii=False, indent=2)
@@ -150,7 +155,7 @@ def knowledge_level_manager(args, timestamp, query_results):
         with open(input_path, "w", encoding="utf-8") as f:      #Save knowledge_input
             json.dump(knowledge_input_dict, f, ensure_ascii=False, indent=2)
 
-        csv_saver(args, dimension, culture, timestamp, culture_dfs, output_path, knowledge_output_dict)
+        csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict)
 
 
     return knowledge_output
