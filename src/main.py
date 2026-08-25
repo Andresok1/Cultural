@@ -64,7 +64,7 @@ csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
 df = pd.read_csv(csv_path)
 dimensions = df["Fine-grained Dimension"].tolist()
 
-dimensions= random.sample(dimensions, 1)        #JUST TO TESTING
+dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
 # dimensions= [
 #     # "tax & accounting",
 #     # "measuring system",
@@ -81,14 +81,14 @@ for file_path in glob.glob(os.path.join(results_folder, "*")):
     
 cultures= [
     "Colombian",
-    # "German",
+    "German",
     # "Italian",
 ]
 
 culture_language = {
-    "Colombian": "es",
-    "German": "de",
-    "Italian": "it",
+    "Colombian": "spanish",
+    "German": "german",
+    "Italian": "italian",
 }
 
 all_results = {}    
@@ -100,9 +100,9 @@ for culture in cultures:
 
         base_query = f"{dimension} in {culture} culture"
         queries = {
-            "en": base_query
+            "english": base_query
         }
-
+        
         lang = culture_language.get(culture)
         if lang:
             queries[lang] = translate(base_query, lang)
@@ -128,6 +128,9 @@ for culture in cultures:
             "languages": languages
         }   
 
+print(f"############################################")
+print("SUMMARY OF SEARCH RESULTS:")
+print("\n")
 
 for key, results in all_results.items():
     languagues = results.get("languages")
