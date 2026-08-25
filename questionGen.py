@@ -615,9 +615,9 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
             else:
                 snippet_list.append("EMPTY")
 
-            if not titl or "(info missing)" in title_cleaned:
+            if not titl or "(NOT RELEVANT INFORMATIONs)" in title_cleaned:
                 print("Added to notEnoughInfo_dimension: ",title_cleaned)
-                notEnoughInfo.append(f"{dimension} in {culture}")
+                notEnoughInfo.append(f"{dimension} in {culture} ({lang})")
 
     print(f"El Knowledge es de: {len(knowledge_list)} unidades")
     print("\n")
@@ -756,17 +756,18 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
 
     if typ not in question_vector[culture][dimension]:
-        key = f"{typ} - {selected_format}"
-        question_vector[culture][dimension][key] = []
+        question_vector[culture][dimension][typ] = []
 
     if selected_format == "single_choice":
-        question_vector[culture][dimension][key].append({
+        question_vector[culture][dimension][typ].append({
+            "format:": selected_format,
             "question": question_cleaned,
             "options": abcd_options_cleaned,
             "reference_answer": reference_answer    
         })
     else:
-        question_vector[culture][dimension][f"{typ} - {selected_format}"].append( {
+        question_vector[culture][dimension][typ].append( {
+            "format:": selected_format,
             "question": question_cleaned,
             "reference_answer": reference_answer
         })
