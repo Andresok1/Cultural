@@ -33,7 +33,7 @@ def PROMPT_KNOWLEDGE(culture, dimension, prompt_texts):
         - If multiple unrelated important findings exist, create separate entries for each one.
         - Do not create redundant entries describing the same information.
         - Do not add external knowledge or assumptions beyond the provided documents.
-        - If no relevant information is found for the requested culture and dimension, return an empty list.
+        - If no relevant information is found for the requested culture and dimension, write as title: (NOT RELEVANT INFORMATION) and the rest as "EMPTY" .
 
         Return the output only in the following structured JSON format:
 
@@ -63,6 +63,10 @@ def openai_create_knowledge(args, text, culture, dimension):
     from a given text. Returns format: title, original snippet and knowledge extrated from
     the text. Does not invent information if there is insufficient support.
     """
+    if not text:
+        print("No documents were given to produce a knowledge entry.")
+        return None
+
     if isinstance(text, str):
         texts = [text]
     else:
@@ -102,6 +106,10 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
         "accept": "application/json",
         "Content-Type": "application/json" 
     }
+
+    if not text:
+        print("No documents were given to produce a knowledge entry.")
+        return None
 
     if isinstance(text, str):
         texts = [text]

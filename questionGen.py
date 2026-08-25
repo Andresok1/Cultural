@@ -615,7 +615,7 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
             else:
                 snippet_list.append("EMPTY")
 
-            if not titl or "(NOT RELEVANT INFORMATIONs)" in title_cleaned:
+            if not titl or "(NOT RELEVANT INFORMATION)" in title_cleaned:
                 print("Added to notEnoughInfo_dimension: ",title_cleaned)
                 notEnoughInfo.append(f"{dimension} in {culture} ({lang})")
 
