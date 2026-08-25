@@ -74,8 +74,10 @@ def knowledge_level_manager(args, timestamp, query_results):
                         knowledge_input.append(content) 
                         if args.api == "openai":
                             knowledge_text= openai_create_knowledge(args, text=content, culture=culture, dimension=dimension)
+                        elif args.api == "openrouter":
+                            knowledge_text = openrouter_create_knowledge(args, text=content, culture=culture, dimension=dimension)
                         else:
-                            knowledge_text = interweb_create_knowledge(text=content, culture=culture, dimension=dimension) #Atomic
+                            knowledge_text = interweb_create_knowledge(args, text=content, culture=culture, dimension=dimension) #Atomic
                             #IF here it says something about (info missing) it should look for more docs
 
                         knowledge_output.append(knowledge_text)   
@@ -108,13 +110,15 @@ def knowledge_level_manager(args, timestamp, query_results):
 
                     if count_by_language == 3:
                         break
-                
-                print(f"For key {key} in {lang}:")
 
+                print(f"For key {key} in {lang}:")
+#Collective
                 if args.api == "openai":
                     knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
+                elif args.api == "openrouter":
+                    knowledge_text = openrouter_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
                 else:
-                    knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension) #Collective
+                    knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
 
                 if knowledge_text is None:
                     knowledge_text = ""
