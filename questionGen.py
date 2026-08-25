@@ -654,7 +654,9 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
     if args.api == "openai":
         result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
-    else: 
+    elif args.api == "openrouter":
+        result = openrouter_create_knowledge(args, text=knowledge_list, question_type=typ, culture=culture,dimension=dimension, question_language=args.question_language)
+    else:
         result = interweb_create_question(args, text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
 
     if result is None:
@@ -777,7 +779,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
 
 
-def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_path, knowledge_output_dict):
+def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict):
     '''This function prepares the question data to deliver it in `.csv` format and save it in the `results` folder.
     return:
         None.
