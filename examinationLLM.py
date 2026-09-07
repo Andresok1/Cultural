@@ -45,7 +45,6 @@ def examination(llm_model, examination_data):
     answers = {}
     metrics = {}
     correct_counter = 0
-    questions_size = 0
 
     print("Evaluating:", llm_model)
 
@@ -70,9 +69,6 @@ def examination(llm_model, examination_data):
                 }
 
                 for question_data in questions:
-
-                    questions_size += 1
-                    # print(question_data)
 
                     question_format = question_data["format"]
                     question = question_data["question"]
@@ -138,16 +134,12 @@ def examination(llm_model, examination_data):
 
                         answer = None
 
-    questions_size_test = sum(
+    questions_size = sum(
         metrics[c][d][q]["total"]
         for c in metrics
         for d in metrics[c]
         for q in metrics[c][d]
     )
-
-    print(questions_size_test)
-    print("vs")
-    print(questions_size)
     
     accuracy = correct_counter/questions_size
 
