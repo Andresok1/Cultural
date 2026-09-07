@@ -143,9 +143,19 @@ def examination(llm_model, examination_data):
     
     accuracy = correct_counter/questions_size
 
-    print(f"{llm_model}: {correct_counter}/{questions_size} - {accuracy} ")
+    for culture in metrics:
+        for dimension in metrics[culture]:
+            for qtype in metrics[culture][dimension]:
 
-    return accuracy, answers
+                total = metrics[culture][dimension][qtype]["total"]
+                correct = metrics[culture][dimension][qtype]["correct"]
+
+                metrics[culture][dimension][qtype]["accuracy"] = (
+                    correct / total if total > 0 else 0
+                )
+
+    return accuracy, answers, metrics
+
 
 print_banner("STARTING EXAM")
 
