@@ -128,10 +128,6 @@ def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
         The answer should be accurate.
         Reference Answer must indicate the correct option.
 
-        Note:
-        1. The question should avoid explicitly mentioning cultural concepts, terminology, or characteristics, in order to effectively assess the student’s understanding of cultural traits.
-        2. A reference answer should be provided after the question.
-        3. Do not change the structure of format given. Just fill in the content after these labels.
         Context:
         {prompt_texts}
         
@@ -139,6 +135,13 @@ def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
         The question should be in the following format:
         {question_format}
 
+        IMPORTANT:
+        1. The question should avoid explicitly mentioning cultural concepts, terminology, or characteristics, in order to effectively assess the student’s understanding of cultural traits.
+        2. A reference answer should be provided after the question.
+        3. Do not change the structure of format given. Just fill in the content after these labels.
+        4. If the provided information is insufficient to generate a meaningful question, do not ask for clarification and do not provide an explanation. Instead, keep the exact same format and write "Not Enough Information" in the appropriate fields.
+
+        Now generate the output.
         """
     print("question type:", question_type)
     print("format:", selected_format)
