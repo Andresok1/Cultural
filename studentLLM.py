@@ -191,7 +191,7 @@ def PROMPT_STUDENT(question, options, question_format):
     return prompt
 
 
-def interweb_student(llm_model, question, options, retries = 5):
+def interweb_student(llm_model, question, options, question_format, retries = 5):
     """
     LLM takes the rol from a student and it answers the question given to it.
     """
@@ -207,7 +207,7 @@ def interweb_student(llm_model, question, options, retries = 5):
         "Content-Type": "application/json" 
     }
 
-    user_prompt = PROMPT_STUDENT(question, options)
+    user_prompt = PROMPT_STUDENT(question, options, question_format)
 
     payload = {
         "model": llm_model,  # Replace with the model available in your API. gpt-4o-mini
@@ -292,7 +292,7 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
         "Authorization": f"Bearer {OPENROUTER_API_KEY}"
     }
 
-    user_prompt = PROMPT_STUDENT(question, options, question_format)
+    user_prompt = PROMPT_STUDENT(question, options, PROMPT_STUDENT)
 
     data = {
         "model": llm_model,
@@ -324,7 +324,7 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
 
         elif response.status_code == 429:
 
-            wait_time = (2 ** attempt) + random.random()
+            wait_time = 10
 
             print(
                 f"429 Rate limit {llm_model}. "
@@ -361,7 +361,7 @@ def openrouter_grader(question, reference_answer, llm_answer, question_type, ret
     user_prompt = PROMPT_GRADER(question, reference_answer, llm_answer, question_type)
 
     data = {
-        "model": "minimax/minimax-m3:free",
+        "model": "qwen/qwen3.8-max-0902",
         "messages": [
             {
                 "role": "system",
