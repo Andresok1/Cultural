@@ -164,9 +164,27 @@ question_path = BASE_DIR / "results" / "questions.json"
 with open(question_path, "r", encoding="utf-8") as file:
     data = json.load(file)
 
-models = ["gpt-4.1-mini", "gemma3:27b", "qwen3.6:35b", "llama3:70b", "deepseek-r1:32b"]
-# models = ["gpt-4.1-mini", "gemma3:27b"]
+# models = [
+#     "inclusionai/ling-3.0-flash-sante:free",
+#     # "minimax/minimax-m3:free",
+#     "qwen/qwen3.8-max-0902",
+#     # "google/gemma-4-26b-a4b-it:free",
+#     # "inclusionai/ling-3.0-flash-fin:free",
 
+# ]
+
+models = [
+    "gpt-4.1-mini", 
+    "gpt-4o", 
+    # "llama4:16x17b", 
+    # "qwen3.5:9b",
+
+    ]
+
+timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+with open("results/results.txt", "a", encoding="utf-8") as f:
+    f.write(f"Run started: {timestamp}\n")
 
 examination_results = {}
 
