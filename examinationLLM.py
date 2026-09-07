@@ -43,41 +43,112 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
 
 def examination(llm_model, examination_data):
     answers = {}
+    metrics = {}
     correct_counter = 0
     questions_size = 0
 
     print("Evaluating:", llm_model)
 
+    failed_log = BASE_DIR / "results" / "failed_questions.log"
+
     for culture, dimensions in examination_data.items():
 
         answers[culture] = {}
+        metrics[culture] = {}
 
-        for dimension, question_data in dimensions.items():
+        for dimension, question_types in dimensions.items():
 
-            question = question_data["question"]
-            options = question_data["options"]
+            answers[culture][dimension] = {}
+            metrics[culture][dimension] = {}
 
-            reference_answer = question_data["reference_answer"].strip()
-            questions_size += 1
+            for question_type, questions in question_types.items():
 
-            answer = interweb_student(
-                llm_model, 
-                question, 
-                options
-            )
+                answers[culture][dimension][question_type] = []
+                metrics[culture][dimension][question_type] = {
+                    "correct": 0,
+                    "total": 0
+                }
 
-            if answer is not None: 
-                answer = answer.strip()
-            
-            answers[culture][dimension] = {
-                "llm_answer": answer,
-                "reference_answer": reference_answer
-            }
+                for question_data in questions:
 
-            if answer == reference_answer:
-                correct_counter += 1
+                    questions_size += 1
+                    # print(question_data)
 
+                    question_format = question_data["format"]
+                    question = question_data["question"]
+                    options = question_data.get("options")
+                    reference_answer = question_data["reference_answer"]
+                    
+                    try: 
+                        # answer = openrouter_student(
+                        #     llm_model, 
+                        #     question, 
+                        #     options,
+                        #     question_format
+                        # )
+                        answer = interweb_student(
+                            llm_model, 
+                            question, 
+                            options,
+                            question_format
+                        )
 
+                        metrics[culture][dimension][question_type]["total"] += 1    #A None answer is still being a response, so it has to be counted in the total.
+
+                        if answer is not None: 
+
+                            answer = answer.strip()
+                            
+                            point = evaluation_result(question, answer, reference_answer, question_format)
+
+                            correct_counter += point
+
+                            answers[culture][dimension][question_type].append({
+                                "question:": question,
+                                "llm_answer": answer,
+                                "reference_answer": reference_answer,
+                                "score" : point,
+                            })   
+
+                            metrics[culture][dimension][question_type]["correct"] += point
+
+                    except Exception as e:
+
+                        print(
+                            f"FAILED: {llm_model} | {question[:50]}..."
+                        )
+                        print(e)
+
+                        with open(
+                            failed_log,
+                            "a",
+                            encoding="utf-8"
+                        ) as log:
+
+                            log.write(
+                                "\n====================\n"
+                                f"MODEL: {llm_model}\n"
+                                f"CULTURE: {culture}\n"
+                                f"DIMENSION: {dimension}\n"
+                                f"TYPE: {question_type}\n"
+                                f"QUESTION: {question}\n"
+                                f"ERROR: {str(e)}\n"
+                                "====================\n"
+                            )
+
+                        answer = None
+
+    questions_size_test = sum(
+        metrics[c][d][q]["total"]
+        for c in metrics
+        for d in metrics[c]
+        for q in metrics[c][d]
+    )
+
+    print(questions_size_test)
+    print("vs")
+    print(questions_size)
+    
     accuracy = correct_counter/questions_size
 
     print(f"{llm_model}: {correct_counter}/{questions_size} - {accuracy} ")
