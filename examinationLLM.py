@@ -12,6 +12,35 @@ def print_banner(text):
     print("│" + text.center(width - 2) + "│")
     print("╰" + "─" * (width - 2) + "╯")
 
+def normalize_answer(text):
+    return text.strip().lower().replace(".", "").replace(",", "")
+
+def evaluation_result(question, llm_answer, reference_answer, question_type):
+    point = 0
+
+    if llm_answer is None:
+        return "No answer"
+    
+    if question_type == "single_choice":
+        if normalize_answer(llm_answer) == normalize_answer(reference_answer):
+            point += 1
+    elif question_type == "fill_the_blank":
+        if normalize_answer(reference_answer) in normalize_answer(llm_answer):
+            point += 1
+    elif question_type == "true_false":
+        if normalize_answer(llm_answer) == normalize_answer(reference_answer):
+            point += 1
+    elif question_type == "short_answer":
+        result= openrouter_grader(question, reference_answer, llm_answer, question_type)
+        if result == "PASS":
+            point += 1
+    elif question_type == "long_answer":
+        result= openrouter_grader(question, reference_answer, llm_answer, question_type)
+        if result == "PASS":
+            point += 1
+
+    return point
+
 def examination(llm_model, examination_data):
     answers = {}
     correct_counter = 0
