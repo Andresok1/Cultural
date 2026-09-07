@@ -1,7 +1,10 @@
 from pathlib import Path
-import argparse
 import json
-from studentLLM import interweb_student
+from graphics import df_model_culture_dimension, plot_model_culture_accuracy, plot_model_culture_qtype_accuracy, plot_model_questiontype_accuracy, plot_model_culture_dimension
+from studentLLM import interweb_student, openrouter_grader, openrouter_student
+from datetime import datetime
+import pandas as pd
+
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -187,18 +190,35 @@ with open("results/results.txt", "a", encoding="utf-8") as f:
     f.write(f"Run started: {timestamp}\n")
 
 examination_results = {}
+results_table = []
 
 for model in models:
-    accuracy, answers = examination(model, data)
+    accuracy, answers, metrics = examination(model, data)
 
     examination_results[model] = {
         "accuracy": accuracy,
         "answers": answers
     }
 
-# print(results)
+    for culture in metrics:
+        for dimension in metrics[culture]:
+            for qtype in metrics[culture][dimension]:
 
-output_path = BASE_DIR / "results" / f"examination.json"
+                key = {
+                    "model": model,
+                    "culture": culture,
+                    "dimension": dimension,
+                    "question_type": qtype
+                }
+
+                results_table.append({
+                    **key,
+                    "correct": metrics[culture][dimension][qtype]["correct"],
+                    "total": metrics[culture][dimension][qtype]["total"]
+                })
+
+
+output_path = BASE_DIR / "results" / f"exam_results.json"
 with open(output_path, "w", encoding="utf-8") as file:
     json.dump(
         examination_results,
@@ -206,3 +226,46 @@ with open(output_path, "w", encoding="utf-8") as file:
         indent=4,
         ensure_ascii=False
     )
+
+df_detail = pd.DataFrame(results_table)
+
+df_detail.to_csv(
+    "results/model_culture_dimension_questiontype_results.csv",
+    index=False
+)
+
+df = pd.DataFrame(results_table)
+
+df = (
+    df
+    .groupby(
+        [
+            "model",
+            "culture",
+            "question_type"
+        ]
+    )
+    .agg(
+        {
+            "correct":"sum",
+            "total":"sum"
+        }
+    )
+    .reset_index()
+)
+
+df["accuracy"] = df["correct"] / df["total"]
+
+df.to_csv(
+    "results/model_culture_questiontype_results.csv",
+    index=False
+)
+
+#Graphics
+plot_model_culture_accuracy(df)
+plot_model_questiontype_accuracy(df)
+plot_model_culture_qtype_accuracy(df)
+
+df_dimension = df_model_culture_dimension(df_detail)
+
+plot_model_culture_dimension(df_dimension)
