@@ -669,6 +669,10 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
     else: 
         question_reference, selected_format = result
 
+        output_path_raw = f"results/questions_raw.json"
+        with open(output_path_raw, "w", encoding="utf-8") as f:     #Save question (RAW question)
+            json.dump(question_reference, f, ensure_ascii=False, indent=2)
+
     #for each question type there is a differnet format to follow
     if question_reference is not None:
 
@@ -763,15 +767,16 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
     if selected_format == "single_choice":
         question_vector[culture][dimension][typ].append({
-            "format:": selected_format,
+            "format": selected_format,
             "question": question_cleaned,
             "options": abcd_options_cleaned,
             "reference_answer": reference_answer    
         })
     else:
         question_vector[culture][dimension][typ].append( {
-            "format:": selected_format,
+            "format": selected_format,
             "question": question_cleaned,
+            "options": abcd_options_cleaned,
             "reference_answer": reference_answer
         })
 
