@@ -619,7 +619,7 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
                 snippet_list.append("EMPTY")
 
             if not titl or "(NOT RELEVANT INFORMATION)" in title_cleaned:
-                print("Added to notEnoughInfo_dimension: ",title_cleaned)
+                print(f"Added to notEnoughInfo_dimension: {dimension} ",title_cleaned)
                 notEnoughInfo.append(f"{dimension} in {culture} ({lang})")
 
     print(f"El Knowledge es de: {len(knowledge_list)} unidades")
