@@ -1,3 +1,4 @@
+from result_paths import KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR
 from datetime import datetime
 from duckDuckGo import fetch_raw_results
 from knowledgeGen import knowledge_level_manager, translate
@@ -14,6 +15,12 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent
 
+def positive_integer(value):
+    number = int(value)
+    if number <= 0:
+        raise argparse.ArgumentTypeError("Batch size must be greater than zero")
+    return number
+
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument(
@@ -24,10 +31,17 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--batch_size",
+    type=positive_integer, 
+    default=5,
+    help="Documents per collective batch; all valid documents are processed."
+)
+
+parser.add_argument(
     "--max_results",
     type=int,
     default=5,
-    help="Maximum documents per language used together in collective mode.",
+    help="Legacy atomic-mode count check; ignored in collective mode. Use --batch_size for collective batches.",
 )
 
 parser.add_argument(
@@ -74,6 +88,7 @@ dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
 timestamp = datetime.now().strftime("%m%d_%H%M")
 
 
+#Result folder cleaning before starting the process
 for results_folder in (KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR):
     for file_path in results_folder.iterdir():
         if file_path.is_file():
