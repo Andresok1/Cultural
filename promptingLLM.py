@@ -58,7 +58,7 @@ def PROMPT_KNOWLEDGE(culture, dimension, prompt_texts):
     return user_prompt
 
 
-def openai_create_knowledge(args, text, culture, dimension):
+def openai_create_knowledge(args, text, culture, dimension, language=None):
     """
     Extracts important features and content related to a specific culture using OpenAI API
     from a given text. Returns format: title, original snippet and knowledge extrated from
@@ -81,7 +81,7 @@ def openai_create_knowledge(args, text, culture, dimension):
 
     client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
-    print("openai / gpt-4o-mini | Sending request...", flush=True)
+    print(f"{language + ' | ' if language else ''}openai / gpt-4o-mini | Sending request...", flush=True)
     started = perf_counter()
     response = client.chat.completions.create(
         model= "gpt-4o-mini", #OPENAI constant Model
@@ -89,11 +89,11 @@ def openai_create_knowledge(args, text, culture, dimension):
     )
 
     content = response.choices[0].message.content
-    print(f"openai / gpt-4o-mini | Finished after {perf_counter() - started:.1f}s")
+    print(f"{language + ' | ' if language else ''}openai / gpt-4o-mini | Finished after {perf_counter() - started:.1f}s")
     return content
 
 
-def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
+def interweb_create_knowledge(args, text, culture, dimension, retries = 5, language=None):
     """
     Extracts important features and content related to a specific culture using Interweb API
     from a given text. Returns format: title, original snippet and knowledge extrated from
@@ -139,7 +139,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
     }
 
     try:
-        print(f"interweb / {args.llm_model} | Sending request...", flush=True)
+        print(f"{language + ' | ' if language else ''}interweb / {args.llm_model} | Sending request...", flush=True)
         started = perf_counter()
         response = requests.post(
             f"{url}/v1/chat/completions",
@@ -158,7 +158,8 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
                     text,
                     culture,
                     dimension,
-                    retries - 1
+                    retries - 1, 
+                    language=language
                 )
             else: 
                 print("Game Over")
@@ -175,12 +176,13 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
                     text,
                     culture,
                     dimension,
-                    retries - 1
+                    retries - 1, 
+                    language=language
                 )
 
             return None
 
-        print(f"interweb / {args.llm_model} | Finished after {perf_counter() - started:.1f}s")
+        print(f"{language + ' | ' if language else ''}interweb / {args.llm_model} | Finished after {perf_counter() - started:.1f}s")
         return answer
     
     except requests.exceptions.RequestException as e:
@@ -192,12 +194,13 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
                 text,
                 culture,
                 dimension,
-                retries - 1
+                retries - 1, 
+                language=language
             )
 
         return None
 
-def openrouter_create_knowledge(args, text, culture, dimension, retries=5):
+def openrouter_create_knowledge(args, text, culture, dimension, retries=5, language=None):
 
     load_dotenv()
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -237,7 +240,7 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5):
         ]
     }
 
-    print(f"openrouter / {args.llm_model} | Sending request...", flush=True)
+    print(f"{language + ' | ' if language else ''}openrouter / {args.llm_model} | Sending request...", flush=True)
     started = perf_counter()
     response = requests.post(
         f"{url}/api/v1/chat/completions",
@@ -254,7 +257,7 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5):
     # print(response_json)
 
     answer = response.json()["choices"][0]["message"]["content"]
-    print(f"openrouter / {args.llm_model} | Finished after {perf_counter() - started:.1f}s")
+    print(f"{language + ' | ' if language else ''}openrouter / {args.llm_model} | Finished after {perf_counter() - started:.1f}s")
 
     if not answer or not answer.strip():
         print("WARNING: Empty answer from OpenRouter")

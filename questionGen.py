@@ -32,8 +32,6 @@ def random_llm(selected_format):
             The correct answer must be the option: {reference}
             For True and False questions tailor your question to match this.
         """
-    print("Reference answer:", reference)
-    print("\n")
     return randomness_prompt
      
     
@@ -143,8 +141,6 @@ def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
 
         Now generate the output.
         """
-    print("question type:", question_type)
-    print("format:", selected_format)
 
     if selected_format == "single_choice" or  selected_format == "true_false":
         random_feature= random_llm(selected_format)
@@ -442,6 +438,8 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     print(f"Question | {culture} | {dimension} | Knowledge entries: {len(knowledge_list)}")
+    if report:
+        print("emptyKnowledge is not empty. Check results/emptyKnowledge.json.")
     return knowledge_list, title_list, snippet_list
 
 def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
@@ -468,6 +466,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
         question_vector[culture][dimension] = {}
 
 
+    print(f"{typ} | Sending request...", flush=True)
     if args.api == "openai":
         result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
     elif args.api == "openrouter":
@@ -476,7 +475,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
         result = interweb_create_question(args, text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
 
     if result is None:
-        print("Warning: No question generated for this knowledge set.")
+        print(f"{typ} | No question generated.\n")
         selected_format = None
         question_reference = None
     else: 
@@ -597,6 +596,9 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(question_vector, f, ensure_ascii=False, indent=2)
 
+    if question_reference is not None:
+        print(f"{typ} | DONE\n")
+
     return question_cleaned, abcd_options_cleaned, reference_answer, selected_format
 
 
@@ -610,7 +612,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     knowledge_list, title_list, snippet_list= knowledge_preparing(args, culture, dimension, knowledge_output_dict)
 
     if not knowledge_list:
-        print(f"{culture} | {dimension} | Question generation skipped: no valid knowledge in any language.")
+        print("Skipped: no relevant knowledge.")
         return
 
     if args.question_type == "all":
