@@ -131,16 +131,22 @@ def knowledge_level_manager(args, timestamp, query_results):
                     if isinstance(entries, dict):
                         entries = [entries]
 
-                    entry_count = sum(
-                        1 for entry in entries
+                    valid_entries = [
+                        entry for entry in entries
                         if isinstance(entry, dict)
                         and "NOT RELEVANT INFORMATION" not in str(entry.get("title", "")).upper()
-                        and isinstance(entry.get("knowledge"), str)
-                        and entry["knowledge"].strip().upper() not in ("", "EMPTY")
-                    )
+                        and all(
+                            isinstance(entry.get(field), str)
+                            and entry[field].strip().upper() not in ("", "EMPTY")
+                            for field in ("title", "snippet", "knowledge")
+                        )
+                    ]
+                    knowledge_text_cleaned = json.dumps(valid_entries, ensure_ascii=False)
+                    entry_count = len(valid_entries)
                     print(f"{args.api} / {model} | Knowledge entries: {entry_count}")
 
                 except (json.JSONDecodeError, TypeError):
+                    knowledge_text_cleaned = "[]"
                     print(f"{args.api} / {model} | Knowledge entries: unknown (invalid response)")
 
                 knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
