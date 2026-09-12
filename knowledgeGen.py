@@ -62,6 +62,12 @@ def knowledge_level_manager(args, timestamp, query_results):
         knowledge_output_dicc = {}
         count = 0
         
+        print(f"###{key}'[# docs]:###")
+        for lang, data in languages.items():
+            print(f"- {lang}: {len(data.get('ranking', []))}")
+        total = sum(len(data.get("ranking", [])) for data in languages.values())
+        print(f"--------TOTAL: {total} --------\n")
+
         if args.knowledge_level == "atomic":
             for lang, data in languages.items():
                 query_by_language = data.get("query", [])
@@ -97,11 +103,6 @@ def knowledge_level_manager(args, timestamp, query_results):
                 print(f"DOCS MISSING {count}/{args.max_results}")
 
         else: #"collective" knowledge level
-            print(f"###{key}'[# docs]:###")
-            for lang, data in languages.items():
-                print(f"- {lang}: {len(data.get('ranking', []))}")
-            total = sum(len(data.get("ranking", [])) for data in languages.values())
-            print(f"--------TOTAL: {total} --------\n")
             print(f"Knowledge | {culture} | {dimension}")
 
             for lang, data in languages.items():

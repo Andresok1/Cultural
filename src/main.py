@@ -128,27 +128,17 @@ for culture in cultures:
             "languages": languages
         }   
 
-print(f"############################################")
-print("SUMMARY OF SEARCH RESULTS:")
-print("\n")
-
-for key, results in all_results.items():
-    languagues = results.get("languages")
-    
-    print(f"###{key}'[# docs]:###")
-    
-    key_size = 0
-    for lang, info in languagues.items():
-        ranking = info.get("ranking")
-        print(f"- {lang}: {len(ranking)} ")
-        key_size += len(ranking)
-    print(f"--------TOTAL: {key_size} --------")
-    print("\n")
-
 with open("results/query_results.json", "w", encoding="utf-8") as f:
     json.dump(all_results, f, ensure_ascii=False, indent=2)
 
 knowledge_output= knowledge_level_manager(args, timestamp, all_results)
 
 print("All Done!")
+
+empty_knowledge_path = results_folder / "emptyKnowledge.json"
+if empty_knowledge_path.exists():
+    with empty_knowledge_path.open("r", encoding="utf-8") as f:
+        empty_knowledge = json.load(f)
+    if empty_knowledge:
+        print("\nemptyKnowledge is not empty. Check results/emptyKnowledge.json.")
 

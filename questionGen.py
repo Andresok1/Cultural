@@ -438,8 +438,6 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     print(f"Question | {culture} | {dimension} | Knowledge entries: {len(knowledge_list)}")
-    if report:
-        print("emptyKnowledge is not empty. Check results/emptyKnowledge.json.")
     return knowledge_list, title_list, snippet_list
 
 def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
