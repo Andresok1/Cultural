@@ -17,7 +17,7 @@ def PROMPT_KNOWLEDGE(culture, dimension, prompt_texts):
 
         Your task is to analyze all documents together as a single knowledge source and identify the most relevant pieces of information related to the given culture and dimension.
 
-        Generate between 1 and 5 independent knowledge entries when relevant evidence exists. Only create an entry when the documents contain meaningful information directly related to the requested dimension and culture.
+        Extract all distinct knowledge entries supported by relevant evidence in the provided documents. Do not require a minimum number of entries. Only create an entry when the documents contain meaningful information directly related to the requested dimension and culture.
         Relevant evidence describes a practice, expectation, behavior, or fact concerning the requested dimension in the requested cultural context. Mentioning the culture alone, or discussing an adjacent topic without an explicit connection to the dimension, is not sufficient.
         A finding may address only one specific aspect of the dimension; it does not need to describe the entire culture. Preserve any limits stated in the source, such as location, setting, group, or uncertainty. Do not turn a specific example into a general cultural rule.
 
