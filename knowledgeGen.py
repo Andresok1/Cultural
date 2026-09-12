@@ -129,19 +129,19 @@ def knowledge_level_manager(args, timestamp, query_results):
                                     for document in knowledge_input_cache]
                     batch_label = f"{lang} | Batch {offset // args.batch_size + 1}/{total_batches}"
 
-                if args.api == "openai":
+                    if args.api == "openai":
                         knowledge_text = openai_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
-                elif args.api == "openrouter":
+                    elif args.api == "openrouter":
                         knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
-                else:
+                    else:
                         knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
 
                     knowledge_text_cleaned = json_cleanig(knowledge_text or "")
-                try:
-                    entries = json.loads(knowledge_text_cleaned) if knowledge_text_cleaned else []
+                    try:
+                        entries = json.loads(knowledge_text_cleaned) if knowledge_text_cleaned else []
 
-                    if isinstance(entries, dict):
-                        entries = [entries]
+                        if isinstance(entries, dict):
+                            entries = [entries]
 
                         valid_entries = []
 
@@ -159,7 +159,7 @@ def knowledge_level_manager(args, timestamp, query_results):
 
                             fields_are_valid = all(
                                 isinstance(entry.get(field), str)
-                            and entry[field].strip().upper() not in ("", "EMPTY")
+                                and entry[field].strip().upper() not in ("", "EMPTY")
                                 for field in required_fields
                             )
 
@@ -168,7 +168,7 @@ def knowledge_level_manager(args, timestamp, query_results):
 
                         language_entries.extend(valid_entries)
                         print(f"{batch_label} | Knowledge entries: {len(valid_entries)}")
-                except (json.JSONDecodeError, TypeError):
+                    except (json.JSONDecodeError, TypeError):
                         print(f"{batch_label} | Knowledge entries: unknown (invalid response)")
 
                 knowledge_text_cleaned = json.dumps(language_entries, ensure_ascii=False)
