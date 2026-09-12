@@ -102,6 +102,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                 print(f"- {lang}: {len(data.get('ranking', []))}")
             total = sum(len(data.get("ranking", [])) for data in languages.values())
             print(f"--------TOTAL: {total} --------\n")
+            print(f"Knowledge | {culture} | {dimension}")
 
             for lang, data in languages.items():
                 query_by_language = data.get("query", [])
@@ -111,14 +112,13 @@ def knowledge_level_manager(args, timestamp, query_results):
                 knowledge_input_cache = valid_contents[:max(0, args.max_results)]
                 count_by_language = len(knowledge_input_cache)
 
-                print(f"Knowledge | {culture} | {dimension} | {lang}")
 #Collective
                 if args.api == "openai":
-                    knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
+                    knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension, language=lang)
                 elif args.api == "openrouter":
-                    knowledge_text = openrouter_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
+                    knowledge_text = openrouter_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension, language=lang)
                 else:
-                    knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
+                    knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension, language=lang)
 
                 if knowledge_text is None:
                     knowledge_text = ""
@@ -143,11 +143,11 @@ def knowledge_level_manager(args, timestamp, query_results):
                     ]
                     knowledge_text_cleaned = json.dumps(valid_entries, ensure_ascii=False)
                     entry_count = len(valid_entries)
-                    print(f"{args.api} / {model} | Knowledge entries: {entry_count}")
+                    print(f"{lang} | {args.api} / {model} | Knowledge entries: {entry_count}")
 
                 except (json.JSONDecodeError, TypeError):
                     knowledge_text_cleaned = "[]"
-                    print(f"{args.api} / {model} | Knowledge entries: unknown (invalid response)")
+                    print(f"{lang} | {args.api} / {model} | Knowledge entries: unknown (invalid response)")
 
                 knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
                 knowledge_output_dicc[lang] = knowledge_text_cleaned
