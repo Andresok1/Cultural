@@ -76,9 +76,10 @@ def knowledge_level_manager(args, timestamp, query_results):
                 
                 count_by_language = 0
 
-                for content in ranking:
+                for document in ranking:
+                    content = document.get("text", "") if isinstance(document, dict) else document
                     if content:
-                        knowledge_input.append(content) 
+                        knowledge_input.append(document) 
                         if args.api == "openai":
                             knowledge_text= openai_create_knowledge(args, text=content, culture=culture, dimension=dimension)
                         elif args.api == "openrouter":
@@ -110,17 +111,32 @@ def knowledge_level_manager(args, timestamp, query_results):
                 query_by_language = data.get("query", [])
                 ranking = data.get("ranking", [])
 
-                valid_contents = [content for content in ranking if content]
+                valid_contents = []
+
+                for document in ranking:
+
+                    if isinstance(document, dict):
+                        content = document.get("text")
+                    else:
+                        content = document
+
+                    if content:
+                        valid_contents.append(document)
+                
                 knowledge_input_cache = valid_contents[:max(0, args.max_results)]
                 count_by_language = len(knowledge_input_cache)
+                prompt_texts = [
+                    document["text"] if isinstance(document, dict) else document
+                    for document in knowledge_input_cache
+                ]
 
 #Collective
                 if args.api == "openai":
-                    knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension, language=lang)
+                    knowledge_text= openai_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=lang)
                 elif args.api == "openrouter":
-                    knowledge_text = openrouter_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension, language=lang)
+                    knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=lang)
                 else:
-                    knowledge_text = interweb_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension, language=lang)
+                    knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=lang)
 
                 if knowledge_text is None:
                     knowledge_text = ""
