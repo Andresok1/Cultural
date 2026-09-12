@@ -16,7 +16,9 @@ def PROMPT_KNOWLEDGE(culture, dimension, prompt_texts):
 
         Your task is to analyze all documents together as a single knowledge source and identify the most relevant pieces of information related to the given culture and dimension.
 
-        Generate between 1 and 5 independent knowledge entries. Only create an entry when the documents contain meaningful information directly related to the requested dimension and culture.
+        Generate between 1 and 5 independent knowledge entries when relevant evidence exists. Only create an entry when the documents contain meaningful information directly related to the requested dimension and culture.
+        Relevant evidence describes a practice, expectation, behavior, or fact concerning the requested dimension in the requested cultural context. Mentioning the culture alone, or discussing an adjacent topic without an explicit connection to the dimension, is not sufficient.
+        A finding may address only one specific aspect of the dimension; it does not need to describe the entire culture. Preserve any limits stated in the source, such as location, setting, group, or uncertainty. Do not turn a specific example into a general cultural rule.
 
         For each relevant finding, return:
 
@@ -28,7 +30,8 @@ def PROMPT_KNOWLEDGE(culture, dimension, prompt_texts):
 
         Important rules:
         - Treat all provided documents as one combined source. Do not analyze documents independently.
-        - Search across the entire document collection and combine information when multiple documents describe the same cultural feature.
+        - Search across the entire document collection to identify distinct findings. When multiple documents describe the same cultural feature, avoid duplicate entries and select a supporting excerpt from one document for that finding.
+        - Each snippet must be one continuous excerpt with enough context to support the knowledge summary. Do not stitch passages together or infer explanations that the excerpt does not provide.
         - Each snippet and knowledge pair must represent one distinct and meaningful cultural finding.
         - If multiple unrelated important findings exist, create separate entries for each one.
         - Do not create redundant entries describing the same information.
@@ -44,9 +47,6 @@ def PROMPT_KNOWLEDGE(culture, dimension, prompt_texts):
                 "dimension": "{dimension}",
                 "snippet": "...",
                 "knowledge": "..."
-                "snippet": "...",
-                "knowledge": "..."
-                ...
             }}
         ]
         Documents:
