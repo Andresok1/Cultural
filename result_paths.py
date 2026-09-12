@@ -9,3 +9,6 @@ EXAM_DIR = RESULTS_DIR / "exam"
 
 for directory in (KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR):
     directory.mkdir(parents=True, exist_ok=True)
+
+# Experiment runs are separate from normal results and startup cleanup.
+EXPERIMENT_DIR = Path(__file__).resolve().parent / "experiment"
