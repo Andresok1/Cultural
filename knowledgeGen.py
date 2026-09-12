@@ -104,17 +104,15 @@ def knowledge_level_manager(args, timestamp, query_results):
             if count < args.max_results:
                 print(f"DOCS MISSING {count}/{args.max_results}")
 
-        else: #"collective" knowledge level
+        else: # collective: evaluate each batch within the existing language loop
             print(f"Knowledge | {culture} | {dimension}")
+            if args.batch_size <= 0:
+                raise ValueError("batch_size must be positive")
 
             for lang, data in languages.items():
-                query_by_language = data.get("query", [])
                 ranking = data.get("ranking", [])
-
                 valid_contents = []
-
                 for document in ranking:
-
                     if isinstance(document, dict):
                         content = document.get("text")
                     else:
@@ -122,62 +120,64 @@ def knowledge_level_manager(args, timestamp, query_results):
 
                     if content:
                         valid_contents.append(document)
-                
-                knowledge_input_cache = valid_contents[:max(0, args.max_results)]
-                count_by_language = len(knowledge_input_cache)
-                prompt_texts = [
-                    document["text"] if isinstance(document, dict) else document
-                    for document in knowledge_input_cache
-                ]
+                language_entries = []
+                total_batches = (len(valid_contents) + args.batch_size - 1) // args.batch_size  #upper bound division for total number of batches
 
-#Collective
+                for offset in range(0, len(valid_contents), args.batch_size):
+                    knowledge_input_cache = valid_contents[offset:offset + args.batch_size] #batch slider
+                    prompt_texts = [document["text"] if isinstance(document, dict) else document
+                                    for document in knowledge_input_cache]
+                    batch_label = f"{lang} | Batch {offset // args.batch_size + 1}/{total_batches}"
+
                 if args.api == "openai":
-                    knowledge_text= openai_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=lang)
+                        knowledge_text = openai_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
                 elif args.api == "openrouter":
-                    knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=lang)
+                        knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
                 else:
-                    knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=lang)
+                        knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
 
-                if knowledge_text is None:
-                    knowledge_text = ""
-
-                knowledge_text_cleaned= json_cleanig(knowledge_text)
-
-                model = "gpt-4o-mini" if args.api == "openai" else args.llm_model
+                    knowledge_text_cleaned = json_cleanig(knowledge_text or "")
                 try:
                     entries = json.loads(knowledge_text_cleaned) if knowledge_text_cleaned else []
+
                     if isinstance(entries, dict):
                         entries = [entries]
 
-                    valid_entries = [
-                        entry for entry in entries
-                        if isinstance(entry, dict)
-                        and "NOT RELEVANT INFORMATION" not in str(entry.get("title", "")).upper()
-                        and all(
-                            isinstance(entry.get(field), str)
+                        valid_entries = []
+
+                        required_fields = ("title", "snippet", "knowledge")
+
+                        for entry in entries:
+
+                            if not isinstance(entry, dict):
+                                continue
+
+                            title = entry.get("title", "")
+
+                            if "NOT RELEVANT INFORMATION" in str(title).upper():
+                                continue
+
+                            fields_are_valid = all(
+                                isinstance(entry.get(field), str)
                             and entry[field].strip().upper() not in ("", "EMPTY")
-                            for field in ("title", "snippet", "knowledge")
-                        )
-                    ]
-                    knowledge_text_cleaned = json.dumps(valid_entries, ensure_ascii=False)
-                    entry_count = len(valid_entries)
-                    print(f"{lang} | {args.api} / {model} | Knowledge entries: {entry_count}")
+                                for field in required_fields
+                            )
 
+                            if fields_are_valid:
+                                valid_entries.append(entry)
+
+                        language_entries.extend(valid_entries)
+                        print(f"{batch_label} | Knowledge entries: {len(valid_entries)}")
                 except (json.JSONDecodeError, TypeError):
-                    knowledge_text_cleaned = "[]"
-                    print(f"{lang} | {args.api} / {model} | Knowledge entries: unknown (invalid response)")
+                        print(f"{batch_label} | Knowledge entries: unknown (invalid response)")
 
-                knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
+                knowledge_text_cleaned = json.dumps(language_entries, ensure_ascii=False)
+                knowledge_output.append(knowledge_text_cleaned)
                 knowledge_output_dicc[lang] = knowledge_text_cleaned
-
-                count += count_by_language
-                knowledge_input.append(knowledge_input_cache)   #Input storage for each language
-                knowledge_input_dicc[lang] = knowledge_input_cache
+                knowledge_input.append(valid_contents)
+                knowledge_input_dicc[lang] = valid_contents
+                count += len(valid_contents)
                 print()
-
-            # print(f"({count}/{args.max_results}) documents as input in both languages") #(6/5) documents as input in both languages
-
-            # knowledge_output.append(knowledge_text_cleaned)    ###One knowledge result for all docs
 
         if culture not in knowledge_output_dict:
             knowledge_output_dict[culture] = {}
