@@ -1,9 +1,28 @@
+from hashlib import sha256
 import requests
+import json
+import unicodedata
+from result_paths import KNOWLEDGE_DIR
 from bs4 import BeautifulSoup
 from ddgs import DDGS
 from ddgs.exceptions import DDGSException
 import chardet
 from charset_normalizer import from_bytes
+
+
+
+UNREADABLE_THRESHOLD = 0.01
+
+
+def unreadable_text(text):
+    if not text:
+        return False
+    problematic = sum(
+        char == "\ufffd" or (unicodedata.category(char) == "Cc" and char not in "\n\r\t")
+        for char in text
+    )
+    return problematic / len(text) > UNREADABLE_THRESHOLD
+
 
 
 
@@ -13,6 +32,11 @@ def fetch_page_content(url, max_chars=50000):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'} #dictionary with user-agent to mimic a browser
         response = requests.get(url, headers=headers, timeout=5)
+        if not 200 <= response.status_code < 300:
+            return None
+        content_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        if content_type not in ("text/html", "application/xhtml+xml"):
+            return None
         soup = BeautifulSoup(response.text, 'html.parser')
 
         for tag in soup(['script', 'style', 'nav', 'header', 'footer']):
@@ -21,19 +45,26 @@ def fetch_page_content(url, max_chars=50000):
         paragraphs = soup.find_all('p')
         text = ' '.join(p.get_text().strip() for p in paragraphs if p.get_text().strip())
 
+        if not text.strip():
+            return None
+        if unreadable_text(text):
+            return None
+
         return text[:max_chars] if len(text) > max_chars else text #Anwers format
     except Exception as e:
-        return f"Could not fetch content: {e}"
+        pass
+        return None
 
 
 def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False):
     """
     Search with DuckDuckGo (posiblemente no sea DuckDuckGo sino uno general, usa DDGS) and optionally 
     fetch full content of results. 
-    Format: [{{"title": "...", "link": "...", "content": "..."}}, ...]
+    Returns valid documents as dictionaries containing document_id and text.
     """
 
     context = []
+    sources = []
 
     backends = ["google", "bing", "duckduckgo", "brave", "yahoo"] 
 
@@ -58,12 +89,12 @@ def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False)
         except DDGSException as e:
             print(f"    {backend} backend: 0")
 
-    print(f"Retrieved: {len(results_original)}")
+
 
     unique_results = {item['href']: item for item in results_original}.values()
 
     eliminated = len(results_original) - len(unique_results)
-    print(f"Repeated: {eliminated}")
+
     results = list(unique_results)
 
 
@@ -82,6 +113,8 @@ def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False)
  
 
             raw_bytes = fetch_page_content(link)  # It reads url and returns content in bytes.
+            if raw_bytes is None:
+                continue
             if isinstance(raw_bytes, str):  #If fetch_page_content returns a str, it converts in bytes.
                 raw_bytes = raw_bytes.encode('utf-8', errors='replace')
             
@@ -89,23 +122,35 @@ def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False)
             encoding = detected['encoding'] if detected['encoding'] else 'utf-8'
             content = raw_bytes.decode(encoding, errors="replace")  # replace invalid characters with a placeholder
 
-            content_cleaned = content.replace("\n", " ").strip()
+            if unreadable_text(content):
+                continue
+            content_cleaned = " ".join(content.split())
             
             print("Done!") if print_on else None
             print(f"    Content: {content_cleaned[:500]}...\n") if print_on else None
 
             if len(content_cleaned.split()) > min_length:
 
-                context.append(content_cleaned)
+                document_id = "doc_" + sha256(link.encode("utf-8")).hexdigest()
+                context.append({"document_id": document_id, "text": content_cleaned})
+                sources.append({"document_id": document_id, "title": title, "url": link})
 
             else: 
                 too_short += 1
 
         except Exception as e:
-            print(f"    Error processing result: {e}\n")
+            pass
 
-    print(f"Few content: {too_short} (At least more than {min_length} words)") 
-    print(f"Total results: {len(context)}")
+    print(f"Retrieved: {len(results_original)} | Duplicates: {eliminated} | Invalid: {len(results) - len(context)} | Valid: {len(context)}")
+
+
+    sources_path = KNOWLEDGE_DIR / "document_sources.json"
+    source_report = json.loads(sources_path.read_text(encoding="utf-8")) if sources_path.exists() else {}
+    source_report = {identifier: source for identifier, source in source_report.items()
+                     if identifier.startswith("doc_") and isinstance(source, dict) and "url" in source}
+    for source in sources:
+        source_report[source["document_id"]] = source
+    sources_path.write_text(json.dumps(source_report, ensure_ascii=False, indent=2), encoding="utf-8")
 
     return context
 
