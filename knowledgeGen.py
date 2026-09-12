@@ -127,7 +127,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                     knowledge_input_cache = valid_contents[offset:offset + args.batch_size] #batch slider
                     prompt_texts = [document["text"] if isinstance(document, dict) else document
                                     for document in knowledge_input_cache]
-                    batch_label = f"{lang} | Batch {offset // args.batch_size + 1}/{total_batches}"
+                    batch_label = f"{lang} | Batch {offset // args.batch_size + 1}/{total_batches} | docs: {len(knowledge_input_cache)}"
 
                     if args.api == "openai":
                         knowledge_text = openai_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
