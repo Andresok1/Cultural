@@ -388,248 +388,66 @@ def openrouter_create_knowledge(args, text, question_type, culture, dimension, q
 
     return answer, selected_format
 
-
-# def openrouter_create_question(
-#     args,
-#     text,
-#     question_type,
-#     culture,
-#     question_language,
-#     retries=5
-# ):
-#     """
-#     Generates questions using OpenRouter API.
-#     """
-
-#     load_dotenv()
-
-#     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-
-#     url = "https://openrouter.ai/api/v1/chat/completions"
-
-#     headers = {
-#         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-#         "Content-Type": "application/json",
-#         "HTTP-Referer": "https://your-project-url.com",
-#         "X-Title": "Question Generation Pipeline"
-#     }
-
-
-#     user_prompt = PROMPT_QUESTION(
-#         question_type,
-#         culture,
-#         question_language,
-#         text
-#     )
-
-
-#     print("     OpenRouter API is using:", args.llm_model)
-
-
-#     payload = {
-#         "model": args.llm_model,
-#         "messages": [
-#             {
-#                 "role": "system",
-#                 "content": ROLE_QUESTION
-#             },
-#             {
-#                 "role": "user",
-#                 "content": user_prompt
-#             }
-#         ],
-#         "temperature": 0.3,
-#         "max_tokens": 2048
-#     }
-
-
-#     try:
-
-#         response = requests.post(
-#             url,
-#             headers=headers,
-#             json=payload,
-#             timeout=120
-#         )
-
-
-#         # Debug útil
-#         print("Status:", response.status_code)
-
-#         if response.status_code != 200:
-#             print("OpenRouter error:")
-#             print(response.text)
-
-#             if retries > 0:
-#                 print(
-#                     f"Retrying... attempts left: {retries}"
-#                 )
-
-#                 return openrouter_create_question(
-#                     args,
-#                     text,
-#                     question_type,
-#                     culture,
-#                     question_language,
-#                     retries - 1
-#                 )
-
-#             return None
-
-
-#         data = response.json()
-
-
-#         # Comprobar que existe respuesta
-#         if (
-#             "choices" not in data
-#             or len(data["choices"]) == 0
-#         ):
-#             print("Empty choices response:")
-#             print(data)
-
-#             if retries > 0:
-#                 return openrouter_create_question(
-#                     args,
-#                     text,
-#                     question_type,
-#                     culture,
-#                     question_language,
-#                     retries - 1
-#                 )
-
-#             return None
-
-
-#         answer = (
-#             data["choices"][0]
-#             ["message"]
-#             ["content"]
-#         )
-
-
-#         if (
-#             answer is None
-#             or answer.strip() == ""
-#         ):
-#             print("Empty answer received")
-
-#             if retries > 0:
-#                 return openrouter_create_question(
-#                     args,
-#                     text,
-#                     question_type,
-#                     culture,
-#                     question_language,
-#                     retries - 1
-#                 )
-
-#             return None
-
-
-#         print("     DONE: questions created")
-
-#         return answer
-
-
-
-#     except requests.exceptions.RequestException as e:
-
-#         print("Request failed:", e)
-
-#         if retries > 0:
-#             return openrouter_create_question(
-#                 args,
-#                 text,
-#                 question_type,
-#                 culture,
-#                 question_language,
-#                 retries - 1
-#             )
-
-#         return None
-
-
 def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
-    '''This function prepares the knowledge data to deliver it as knowledge_list to gerenate the question afterwards.
-    It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
-    '''
-
+    """Prepare valid knowledge and record languages with no relevant knowledge."""
     knowledge_list = []
     title_list = []
     snippet_list = []
-    notEnoughInfo = []
-
-
+    emptyKnowledge = []
     knowledge_items = knowledge_output_dict[culture][dimension]
 
+    print(f"Processing questions for '{dimension}' in '{culture}'")
 
-    print(f"Procesing question to '{dimension}' in '{culture}'") 
-
-    
     for lang, knowledge_set in knowledge_items.items():
-
-        if (
-        knowledge_set is None
-        or knowledge_set == []
-        or (isinstance(knowledge_set, str) and not knowledge_set.strip())
-        ):
-            print("Warning: empty knowledge_set in some language Query (english /local), skipping")
-            missing_know = (f"Missing Knowledge'{dimension}' in '{culture}' culture: {lang} language.")
-            notEnoughInfo.append(f"{dimension} in {culture} ({lang})")
-
-            continue
-
         try:
-            item = json.loads(knowledge_set)  # it converts the string back to a dictionary 
+            items = json.loads(knowledge_set) if isinstance(knowledge_set, str) and knowledge_set.strip() else (knowledge_set or [])
         except json.JSONDecodeError:
-            print(f"Warning: invalid JSON, skipping: {knowledge_set[:50]}...")
+            print(f"Warning: invalid JSON for {culture} | {dimension} | {lang}, skipping")
+            continue
+        if isinstance(items, dict):
+            items = [items]
+        if not isinstance(items, list):
+            print(f"Warning: invalid knowledge format for {culture} | {dimension} | {lang}, skipping")
             continue
 
-        for data in item:
-            if data: 
-                know = data.get('Knowledge') or data.get('knowledge')
-                titl = data.get('Title') or data.get('title')
-                snipp = data.get('Snippet') or data.get('snippet')
-            else: 
-                know = None
-                titl = None
-                snipp = None
+        language_count = 0
+        for data in items:
+            if not isinstance(data, dict):
+                continue
+            know = data.get('Knowledge') or data.get('knowledge')
+            titl = data.get('Title') or data.get('title')
+            snipp = data.get('Snippet') or data.get('snippet')
+            if isinstance(know, list):
+                know = ", ".join(str(value) for value in know)
+            if not all(isinstance(value, str) and value.strip().upper() not in ("", "EMPTY")
+                       for value in (know, titl, snipp)):
+                continue
+            if "NOT RELEVANT INFORMATION" in titl.upper():
+                continue
+            knowledge_list.append(know.replace(";", ",").strip())
+            title_list.append(titl.replace(";", ",").strip())
+            snippet_list.append(snipp.replace(";", ",").strip())
+            language_count += 1
 
-            if know:
-                know_cleaned = ", ".join(know) if isinstance(know, list) else str(know)
-                know_cleaned = know_cleaned.replace(";", ",").strip()
-                knowledge_list.append(know_cleaned)
-            else: 
-                knowledge_list.append("EMPTY")
+        if language_count == 0:
+            emptyKnowledge.append({"culture": culture, "dimension": dimension, "language": lang})
 
+    report_path = "results/emptyKnowledge.json"
+    if os.path.exists(report_path):
+        with open(report_path, "r", encoding="utf-8") as f:
+            report = json.load(f)
+    else:
+        report = []
+    # Replace this culture/dimension's previous status; preserve other results.
+    report = [entry for entry in report
+              if (entry["culture"], entry["dimension"]) != (culture, dimension)]
+    report.extend(emptyKnowledge)
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
 
-            if titl:
-                title_cleaned = titl.replace(";", ",").strip()
-                title_list.append(title_cleaned)
-            else:
-                title_cleaned = ""
-                title_list.append("EMPTY")
-
-
-            if snipp:
-                snippet_cleaned = snipp.replace(";", ",").strip()
-                snippet_list.append(snippet_cleaned)
-            else:
-                snippet_list.append("EMPTY")
-
-            if not titl or "(NOT RELEVANT INFORMATION)" in title_cleaned:
-                print(f"Added to notEnoughInfo_dimension: {dimension} ",title_cleaned)
-                notEnoughInfo.append(f"{dimension} in {culture} ({lang})")
-
-    print(f"El Knowledge es de: {len(knowledge_list)} unidades")
-    print("\n")
-
-
-    if notEnoughInfo is not None:
-        print("notEnoughInfo_dimension:", notEnoughInfo)  #this should be empty if all is working
-
-    return  knowledge_list, title_list, snippet_list
+    print(f"Knowledge entries available for questions: {len(knowledge_list)}")
+    print("emptyKnowledge:", emptyKnowledge)
+    return knowledge_list, title_list, snippet_list
 
 def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
     '''This function separates title, snippet and knowledge from the knowledge_path and clean them. and separates them into lists to better visualization and data control to create a question.
@@ -795,6 +613,10 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     '''
 
     knowledge_list, title_list, snippet_list= knowledge_preparing(args, culture, dimension, knowledge_output_dict)
+
+    if not knowledge_list:
+        print(f"{culture} | {dimension} | Question generation skipped: no valid knowledge in any language.")
+        return
 
     if args.question_type == "all":
         types = ["factual", "conceptual", "misleading", "multihop"]
