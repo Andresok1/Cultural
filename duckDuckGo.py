@@ -42,8 +42,10 @@ def fetch_page_content(url, max_chars=50000):
         for tag in soup(['script', 'style', 'nav', 'header', 'footer']):
             tag.decompose() #cleaning by tag
 
-        paragraphs = soup.find_all('p')
-        text = ' '.join(p.get_text().strip() for p in paragraphs if p.get_text().strip())
+        # Keep paragraphs and list items once, including paragraphs nested in lists.
+        paragraphs = [tag for tag in soup.find_all(['p', 'li'])
+                      if tag.find_parent(['p', 'li']) is None]
+        text = ' '.join(p.get_text(' ', strip=True) for p in paragraphs if p.get_text(' ', strip=True))
 
         if not text.strip():
             return None
@@ -56,7 +58,7 @@ def fetch_page_content(url, max_chars=50000):
         return None
 
 
-def fetch_raw_results(query,key, num_results=10, min_length=500, print_on=False):
+def fetch_raw_results(query,key, num_results=10, min_length=150, print_on=False):
     """
     Search with DuckDuckGo (posiblemente no sea DuckDuckGo sino uno general, usa DDGS) and optionally 
     fetch full content of results. 
