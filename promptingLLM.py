@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import requests
 import json
 import pandas as pd
+from time import perf_counter
 from openai import OpenAI
 
 
@@ -80,12 +81,15 @@ def openai_create_knowledge(args, text, culture, dimension):
 
     client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
 
+    print("openai / gpt-4o-mini | Sending request...", flush=True)
+    started = perf_counter()
     response = client.chat.completions.create(
         model= "gpt-4o-mini", #OPENAI constant Model
         messages=[{"role": "user", "content": ROLE_KNOWLEDGE + user_prompt}]
     )
 
     content = response.choices[0].message.content
+    print(f"openai / gpt-4o-mini | Finished after {perf_counter() - started:.1f}s")
     return content
 
 
@@ -120,8 +124,6 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
 
     user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
 
-    print("     Interweb API is using:", args.llm_model)
-
     payload = {
         "model": args.llm_model,  # Replace with the model available in your API. gpt-4o-mini
         "messages": [
@@ -137,7 +139,8 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
     }
 
     try:
-            
+        print(f"interweb / {args.llm_model} | Sending request...", flush=True)
+        started = perf_counter()
         response = requests.post(
             f"{url}/v1/chat/completions",
             headers=headers,
@@ -177,7 +180,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5):
 
             return None
 
-        print("     DONE: knowledge created")
+        print(f"interweb / {args.llm_model} | Finished after {perf_counter() - started:.1f}s")
         return answer
     
     except requests.exceptions.RequestException as e:
@@ -206,7 +209,6 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5):
         "Authorization": f"Bearer {OPENROUTER_API_KEY}"
     }
 
-    print(f"XXXXXXXXXXXXX Número de ENTRADAS de KNOWLEDGE: {len(text)}")
     
     if not text:
         print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
@@ -220,8 +222,6 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5):
     prompt_texts = "\n\n".join([f"Text {i}:\n{text}" for i, text in enumerate(texts, 1)])
 
     user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
-
-    print(f"     OPENROUTER API is using: {args.llm_model}")
 
     data = {
         "model": f"openai/{args.llm_model}",  # Replace with the model available in your API. gpt-4o-mini
@@ -237,6 +237,8 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5):
         ]
     }
 
+    print(f"openrouter / {args.llm_model} | Sending request...", flush=True)
+    started = perf_counter()
     response = requests.post(
         f"{url}/api/v1/chat/completions",
         headers=headers,
@@ -252,6 +254,7 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5):
     # print(response_json)
 
     answer = response.json()["choices"][0]["message"]["content"]
+    print(f"openrouter / {args.llm_model} | Finished after {perf_counter() - started:.1f}s")
 
     if not answer or not answer.strip():
         print("WARNING: Empty answer from OpenRouter")

@@ -97,21 +97,21 @@ def knowledge_level_manager(args, timestamp, query_results):
                 print(f"DOCS MISSING {count}/{args.max_results}")
 
         else: #"collective" knowledge level
+            print(f"###{key}'[# docs]:###")
+            for lang, data in languages.items():
+                print(f"- {lang}: {len(data.get('ranking', []))}")
+            total = sum(len(data.get("ranking", [])) for data in languages.values())
+            print(f"--------TOTAL: {total} --------\n")
+
             for lang, data in languages.items():
                 query_by_language = data.get("query", [])
                 ranking = data.get("ranking", [])
 
-                count_by_language = 0
-                knowledge_input_cache = [] # Declaration and reset knowledge_input for the next language
-                for content in ranking:
-                    if content:
-                        knowledge_input_cache.append(content) #Accumulation of Knowlege input for collective analysis. 
-                        count_by_language += 1
+                valid_contents = [content for content in ranking if content]
+                knowledge_input_cache = valid_contents[:max(0, args.max_results)]
+                count_by_language = len(knowledge_input_cache)
 
-                    if count_by_language == 3:
-                        break
-
-                print(f"For key {key} in {lang}:")
+                print(f"{culture} | {dimension} | {lang} |")
 #Collective
                 if args.api == "openai":
                     knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
@@ -125,8 +125,23 @@ def knowledge_level_manager(args, timestamp, query_results):
 
                 knowledge_text_cleaned= json_cleanig(knowledge_text)
 
-                if not knowledge_text_cleaned: 
-                    print(f"    NO KNOWLEDGE FOR: {key} - {lang}")
+                model = "gpt-4o-mini" if args.api == "openai" else args.llm_model
+                try:
+                    entries = json.loads(knowledge_text_cleaned) if knowledge_text_cleaned else []
+                    if isinstance(entries, dict):
+                        entries = [entries]
+
+                    entry_count = sum(
+                        1 for entry in entries
+                        if isinstance(entry, dict)
+                        and "NOT RELEVANT INFORMATION" not in str(entry.get("title", "")).upper()
+                        and isinstance(entry.get("knowledge"), str)
+                        and entry["knowledge"].strip().upper() not in ("", "EMPTY")
+                    )
+                    print(f"{args.api} / {model} | Knowledge entries: {entry_count}")
+
+                except (json.JSONDecodeError, TypeError):
+                    print(f"{args.api} / {model} | Knowledge entries: unknown (invalid response)")
 
                 knowledge_output.append(knowledge_text_cleaned)   ###One knowledge result by language
                 knowledge_output_dicc[lang] = knowledge_text_cleaned
@@ -134,10 +149,9 @@ def knowledge_level_manager(args, timestamp, query_results):
                 count += count_by_language
                 knowledge_input.append(knowledge_input_cache)   #Input storage for each language
                 knowledge_input_dicc[lang] = knowledge_input_cache
+                print()
 
             # print(f"({count}/{args.max_results}) documents as input in both languages") #(6/5) documents as input in both languages
-            if count < args.max_results:
-               print(f"DOCS MISSING {count}/{args.max_results}")
 
             # knowledge_output.append(knowledge_text_cleaned)    ###One knowledge result for all docs
 
