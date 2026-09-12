@@ -128,17 +128,17 @@ for culture in cultures:
             "languages": languages
         }   
 
-with open("results/query_results.json", "w", encoding="utf-8") as f:
+with open(KNOWLEDGE_DIR / "query_results.json", "w", encoding="utf-8") as f:
     json.dump(all_results, f, ensure_ascii=False, indent=2)
 
 knowledge_output= knowledge_level_manager(args, timestamp, all_results)
 
 print("All Done!")
 
-empty_knowledge_path = results_folder / "emptyKnowledge.json"
+empty_knowledge_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
 if empty_knowledge_path.exists():
     with empty_knowledge_path.open("r", encoding="utf-8") as f:
         empty_knowledge = json.load(f)
     if empty_knowledge:
-        print("\nemptyKnowledge is not empty. Check results/emptyKnowledge.json.")
+        print("\nemptyKnowledge is not empty. Check results/knowledge/emptyKnowledge.json.")
 

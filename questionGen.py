@@ -1,5 +1,7 @@
+from result_paths import KNOWLEDGE_DIR, QUESTIONS_DIR
 import re
 import random
+from time import perf_counter
 
 from openai import OpenAI
 import json
@@ -424,7 +426,7 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
     if not knowledge_list:
         emptyKnowledge.append({"culture": culture, "dimension": dimension})
 
-    report_path = "results/emptyKnowledge.json"
+    report_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
     if os.path.exists(report_path):
         with open(report_path, "r", encoding="utf-8") as f:
             report = json.load(f)
@@ -448,7 +450,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
     return:
     question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list, selected_format
     '''
-    output_path = f"results/questions.json"
+    output_path = QUESTIONS_DIR / "questions.json"
             
     
     if os.path.exists(output_path):
@@ -464,7 +466,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
         question_vector[culture][dimension] = {}
 
 
-    print(f"{typ} | Sending request...", flush=True)
+    started = perf_counter()
     if args.api == "openai":
         result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
     elif args.api == "openrouter":
@@ -479,7 +481,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
     else: 
         question_reference, selected_format = result
 
-        output_path_raw = f"results/questions_raw.json"
+        output_path_raw = QUESTIONS_DIR / "questions_raw.json"
         with open(output_path_raw, "w", encoding="utf-8") as f:     #Save question (RAW question)
             json.dump(question_reference, f, ensure_ascii=False, indent=2)
 
@@ -595,7 +597,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
         json.dump(question_vector, f, ensure_ascii=False, indent=2)
 
     if question_reference is not None:
-        print(f"{typ} | DONE\n")
+        print(f"{typ:<10} | Finished after {perf_counter() - started:.1f}s", flush=True)
 
     return question_cleaned, abcd_options_cleaned, reference_answer, selected_format
 
@@ -618,10 +620,12 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     else: 
         types = [args.question_type]
 
+    model = "gpt-4.1-mini" if args.api == "openai" else args.llm_model
+    print(f"{args.api} / {model} | Sending request...", flush=True)
     for typ in types:
         question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension, knowledge_list, typ)
 
-        output_path = f"results/knowledge_output_{timestamp}.json"
+        output_path = KNOWLEDGE_DIR / f"knowledge_output_{timestamp}.json"
 
         if os.path.exists(output_path):
             with open(output_path, "r", encoding="utf-8") as f:
@@ -673,6 +677,6 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
         for culture, dfs in culture_dfs.items():
             if dfs:  
                 final_df = pd.concat(dfs, ignore_index=True)
-                final_df.to_csv(f"results/{culture}_Knowledge_QA.csv", index=False, encoding="utf-8-sig")
+                final_df.to_csv(QUESTIONS_DIR / f"{culture}_Knowledge_QA.csv", index=False, encoding="utf-8-sig")
             else:
                 print(f"Warning: No data to save for culture {culture}")

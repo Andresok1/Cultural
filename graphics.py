@@ -1,3 +1,4 @@
+from result_paths import EXAM_DIR
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -31,7 +32,7 @@ def plot_model_culture_accuracy(df_final):
     plt.tight_layout()
 
     plt.savefig(
-        "results/model_culture_accuracy.png",
+        EXAM_DIR / "model_culture_accuracy.png",
         dpi=300
     )
 
@@ -72,7 +73,7 @@ def plot_model_questiontype_accuracy(df_final):
     plt.tight_layout()
 
     plt.savefig(
-        "results/model_questiontype_accuracy.png",
+        EXAM_DIR / "model_questiontype_accuracy.png",
         dpi=300
     )
 
@@ -114,7 +115,7 @@ def plot_model_culture_qtype_accuracy(df_final):
 
 
     plt.savefig(
-        "results/heatmap_accuracy.png",
+        EXAM_DIR / "heatmap_accuracy.png",
         dpi=300
     )
 
@@ -178,7 +179,7 @@ def plot_model_culture_dimension(df_dimension):
 
 
     plt.savefig(
-        "results/model_dimension.png",
+        EXAM_DIR / "model_dimension.png",
         dpi=300
     )
 

@@ -1,3 +1,4 @@
+from result_paths import KNOWLEDGE_DIR
 import json
 import os
 
@@ -33,8 +34,8 @@ def knowledge_level_manager(args, timestamp, query_results):
         if culture not in culture_dfs:
             culture_dfs[culture] = []
 
-        output_path = f"results/knowledge_output.json"
-        input_path = f"results/knowledge_input.json"
+        output_path = KNOWLEDGE_DIR / "knowledge_output.json"
+        input_path = KNOWLEDGE_DIR / "knowledge_input.json"
 
         if os.path.exists(output_path): #Update for knowledge_output
             try:

@@ -1,3 +1,4 @@
+from result_paths import EXAM_DIR, QUESTIONS_DIR
 from pathlib import Path
 import json
 from graphics import df_model_culture_dimension, plot_model_culture_accuracy, plot_model_culture_qtype_accuracy, plot_model_questiontype_accuracy, plot_model_culture_dimension
@@ -51,7 +52,7 @@ def examination(llm_model, examination_data):
 
     print("Evaluating:", llm_model)
 
-    failed_log = BASE_DIR / "results" / "failed_questions.log"
+    failed_log = EXAM_DIR / "failed_questions.log"
 
     for culture, dimensions in examination_data.items():
 
@@ -162,7 +163,7 @@ def examination(llm_model, examination_data):
 
 print_banner("STARTING EXAM")
 
-question_path = BASE_DIR / "results" / "questions.json"
+question_path = QUESTIONS_DIR / "questions.json"
 
 with open(question_path, "r", encoding="utf-8") as file:
     data = json.load(file)
@@ -186,7 +187,7 @@ models = [
 
 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-with open("results/results.txt", "a", encoding="utf-8") as f:
+with open(EXAM_DIR / "results.txt", "a", encoding="utf-8") as f:
     f.write(f"Run started: {timestamp}\n")
 
 examination_results = {}
@@ -218,7 +219,7 @@ for model in models:
                 })
 
 
-output_path = BASE_DIR / "results" / f"exam_results.json"
+output_path = EXAM_DIR / "exam_results.json"
 with open(output_path, "w", encoding="utf-8") as file:
     json.dump(
         examination_results,
@@ -230,7 +231,7 @@ with open(output_path, "w", encoding="utf-8") as file:
 df_detail = pd.DataFrame(results_table)
 
 df_detail.to_csv(
-    "results/model_culture_dimension_questiontype_results.csv",
+    EXAM_DIR / "model_culture_dimension_questiontype_results.csv",
     index=False
 )
 
@@ -257,7 +258,7 @@ df = (
 df["accuracy"] = df["correct"] / df["total"]
 
 df.to_csv(
-    "results/model_culture_questiontype_results.csv",
+    EXAM_DIR / "model_culture_questiontype_results.csv",
     index=False
 )
 
