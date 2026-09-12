@@ -389,14 +389,12 @@ def openrouter_create_knowledge(args, text, question_type, culture, dimension, q
     return answer, selected_format
 
 def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
-    """Prepare valid knowledge and record languages with no relevant knowledge."""
+    """Prepare valid knowledge and record dimensions empty across all languages."""
     knowledge_list = []
     title_list = []
     snippet_list = []
     emptyKnowledge = []
     knowledge_items = knowledge_output_dict[culture][dimension]
-
-    print(f"Processing questions for '{dimension}' in '{culture}'")
 
     for lang, knowledge_set in knowledge_items.items():
         try:
@@ -410,7 +408,6 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
             print(f"Warning: invalid knowledge format for {culture} | {dimension} | {lang}, skipping")
             continue
 
-        language_count = 0
         for data in items:
             if not isinstance(data, dict):
                 continue
@@ -427,10 +424,9 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
             knowledge_list.append(know.replace(";", ",").strip())
             title_list.append(titl.replace(";", ",").strip())
             snippet_list.append(snipp.replace(";", ",").strip())
-            language_count += 1
 
-        if language_count == 0:
-            emptyKnowledge.append({"culture": culture, "dimension": dimension, "language": lang})
+    if not knowledge_list:
+        emptyKnowledge.append({"culture": culture, "dimension": dimension})
 
     report_path = "results/emptyKnowledge.json"
     if os.path.exists(report_path):
@@ -445,8 +441,7 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
-    print(f"Knowledge entries available for questions: {len(knowledge_list)}")
-    print("emptyKnowledge:", emptyKnowledge)
+    print(f"Question | {culture} | {dimension} | Knowledge entries: {len(knowledge_list)}")
     return knowledge_list, title_list, snippet_list
 
 def knowledge_to_question(args, culture, dimension, knowledge_list, typ):

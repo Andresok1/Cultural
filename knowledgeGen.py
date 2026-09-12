@@ -111,7 +111,7 @@ def knowledge_level_manager(args, timestamp, query_results):
                 knowledge_input_cache = valid_contents[:max(0, args.max_results)]
                 count_by_language = len(knowledge_input_cache)
 
-                print(f"{culture} | {dimension} | {lang} |")
+                print(f"Knowledge | {culture} | {dimension} | {lang}")
 #Collective
                 if args.api == "openai":
                     knowledge_text= openai_create_knowledge(args, text=knowledge_input_cache, culture=culture, dimension=dimension)
