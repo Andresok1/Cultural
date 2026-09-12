@@ -74,11 +74,11 @@ dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
 timestamp = datetime.now().strftime("%m%d_%H%M")
 
 
-results_folder = BASE_DIR.parent / "results" 
-for file_path in glob.glob(os.path.join(results_folder, "*")):
-    if os.path.isfile(file_path):
-        os.remove(file_path)
-    
+for results_folder in (KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR):
+    for file_path in results_folder.iterdir():
+        if file_path.is_file():
+            file_path.unlink()
+
 cultures= [
     "Colombian",
     "German",
