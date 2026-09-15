@@ -3,7 +3,7 @@ import json
 import os
 
 from questionGen import csv_saver
-from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge
+from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge, inference_create_knowledge
 from deep_translator import MyMemoryTranslator
 
 def translate(text, target_lang):
@@ -133,6 +133,8 @@ def knowledge_level_manager(args, timestamp, query_results):
                         knowledge_text = openai_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
                     elif args.api == "openrouter":
                         knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
+                    elif args.api == "inference":
+                        knowledge_text = inference_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
                     else:
                         knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
 

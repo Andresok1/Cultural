@@ -125,7 +125,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5, langu
     user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
 
     payload = {
-        "model": args.llm_model,  # Replace with the model available in your API. gpt-4o-mini
+        "model": args.llm_model,  # Replace with the model available
         "messages": [
             {
                 "role": "system",
@@ -266,6 +266,60 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5, langu
 
     return answer
 
+
+def inference_create_knowledge(args, text=None, culture=None, dimension=None, retries=5, language=None):
+    print("Using Inference API!!!")
+    llm_model = "llamacpp/gemma3:4b-f16"
+
+    load_dotenv()
+    INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
+
+    url = "https://inference.kbs.uni-hannover.de"
+    
+    if not text:
+        print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
+        return None
+
+    if isinstance(text, str):
+        texts = [text]
+    else:
+        texts = text
+
+    prompt_texts = "\n\n".join([f"Text {i}:\n{text}" for i, text in enumerate(texts, 1)])
+
+    user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
+
+    client = OpenAI(
+        base_url=f"{url}/v1",
+        api_key=os.getenv("INFERENCE_API_KEY"),
+    )
+
+    response = client.chat.completions.create(
+        model=llm_model,
+        messages=[
+            {
+                "role": "system",
+                "content": ROLE_KNOWLEDGE
+            },
+            {
+                "role": "user",
+                "content": f"{user_prompt}\n"
+            }
+        ]
+    )
+
+    print(f"{language + ' | ' if language else ''}inference / {llm_model} | Sending request...", flush=True)
+    started = perf_counter()
+
+    answer = response.choices[0].message.content
+    
+    print(f"{language + ' | ' if language else ''}inference / {llm_model} | Finished after {perf_counter() - started:.1f}s")
+
+    if not answer or not answer.strip():
+        print("WARNING: Empty answer from inference")
+        return None
+
+    return answer
 
 
 def interweb_model_list():

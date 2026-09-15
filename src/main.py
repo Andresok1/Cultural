@@ -53,7 +53,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--api",
-    choices=["openai", "interweb", "openrouter"],
+    choices=["openai", "interweb", "openrouter", "inference"],
     default="interweb",
     help="API which is going to be used for knowledge and questions creation",
 )

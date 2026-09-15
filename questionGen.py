@@ -1,3 +1,4 @@
+from promptingLLM import inference_create_knowledge
 from result_paths import KNOWLEDGE_DIR, QUESTIONS_DIR
 import re
 import random
@@ -39,7 +40,7 @@ def random_llm(selected_format):
     
 
 
-def PROMPT_QUESTION(language, instruction, prompt_texts, question_type):
+def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english", ):
 
     question_formats = {
 
@@ -182,9 +183,6 @@ def openai_create_question(text, question_type, culture, question_language):
     else:        
         language = "English"
 
-    if question_type == "random":
-        question_type = random.choice(list(QUESTION_TYPES.keys()))
-
     instruction = QUESTION_TYPES[question_type]
 
     prompt, selected_format= PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
@@ -228,8 +226,6 @@ def interweb_create_question(args, text, question_type, culture, question_langua
     else:        
         language = "English"
 
-    if question_type == "random":
-        question_type = random.choice(list(QUESTION_TYPES.keys()))
 
     instruction = QUESTION_TYPES[question_type]
 
@@ -317,7 +313,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
 
         return None
 
-def openrouter_create_knowledge(args, text, question_type, culture, dimension, question_language, retries=5):
+def openrouter_create_question(args, text, question_type, culture, dimension, question_language, retries=5):
 
     if not text:
             print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
@@ -342,8 +338,6 @@ def openrouter_create_knowledge(args, text, question_type, culture, dimension, q
     else:        
         language = "English"
 
-    if question_type == "random":
-        question_type = random.choice(list(QUESTION_TYPES.keys()))
 
     instruction = QUESTION_TYPES[question_type]
 
@@ -385,6 +379,77 @@ def openrouter_create_knowledge(args, text, question_type, culture, dimension, q
     answer = response.json()["choices"][0]["message"]["content"]
 
     return answer, selected_format
+
+
+
+def inference_create_question(args, text, question_type, culture, dimension, question_language, retries=5, language=None):
+    print("Using Inference API!!!")
+    llm_model = "llamacpp/gemma3:4b-f16"
+
+    load_dotenv()
+    INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
+
+    url = "https://inference.kbs.uni-hannover.de"
+    
+    if not text:
+        print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
+        return None
+
+    if isinstance(text, str):
+        texts = [text]
+    else:
+        texts = text
+
+    prompt_texts = "\n\n".join([f"Text {i}:\n{text}" for i, text in enumerate(texts, 1)])
+
+
+    instruction = QUESTION_TYPES[question_type]
+
+    prompt, selected_format = PROMPT_QUESTION(instruction, prompt_texts, question_type, language=language)
+
+    client = OpenAI(
+        base_url=f"{url}/v1",
+        api_key=os.getenv("INFERENCE_API_KEY"),
+    )
+
+    response = client.chat.completions.create(
+        model=llm_model,
+        messages=[
+            {
+                "role": "system",
+                "content": ROLE_QUESTION
+            },
+            {
+                "role": "user",
+                "content": f"{prompt}\n"
+            }
+        ]
+    )
+
+    print(f"{language + ' | ' if language else ''}inference / {llm_model} | Sending request...", flush=True)
+    started = perf_counter()
+
+    answer = response.choices[0].message.content
+    
+    print(f"{language + ' | ' if language else ''}inference / {llm_model} | Finished after {perf_counter() - started:.1f}s")
+
+    if not answer or not answer.strip():
+        print("WARNING: Empty answer from inference")
+        return None
+
+    return answer, selected_format
+
+
+
+
+
+
+
+
+
+
+
+
 
 def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
     """Prepare valid knowledge and record dimensions empty across all languages."""
@@ -470,7 +535,9 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
     if args.api == "openai":
         result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
     elif args.api == "openrouter":
-        result = openrouter_create_knowledge(args, text=knowledge_list, question_type=typ, culture=culture,dimension=dimension, question_language=args.question_language)
+        result = openrouter_create_question(args, text=knowledge_list, question_type=typ, culture=culture,dimension=dimension, question_language=args.question_language)
+    elif args.api == "inference":
+        result = inference_create_question(args, text=knowledge_list, question_type=typ, culture=culture, dimension=dimension, question_language=args.question_language)
     else:
         result = interweb_create_question(args, text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
 
