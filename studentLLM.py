@@ -292,7 +292,7 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
         "Authorization": f"Bearer {OPENROUTER_API_KEY}"
     }
 
-    user_prompt = PROMPT_STUDENT(question, options, PROMPT_STUDENT)
+    user_prompt = PROMPT_STUDENT(question, options, question_format)
 
     data = {
         "model": llm_model,

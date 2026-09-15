@@ -22,7 +22,7 @@ ROLE_QUESTION = "You are an expert educational assessment designer specialized i
 def random_llm(selected_format):
 
     randomness_prompt = ""
-    reference = "EMPTY"
+    reference = ""
     if selected_format == "single_choice":
         reference= random.choice(["A","B","C","D"])
         randomness_prompt = f"""
