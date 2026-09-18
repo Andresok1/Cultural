@@ -6,7 +6,8 @@ import requests
 import json
 import pandas as pd
 from time import perf_counter
-from openai import OpenAI
+import time
+from openai import APIConnectionError, APITimeoutError, InternalServerError, OpenAI, RateLimitError
 
 
 ROLE_KNOWLEDGE = f"You are an expert assistant in cultural text analysis. Your task is to read the following texts provided and extract only the relevant information related to the culture."
@@ -145,7 +146,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 5, langu
             f"{url}/v1/chat/completions",
             headers=headers,
             json=payload,
-            timeout=60
+            timeout=10
         )
 
         if response.status_code != 200:
@@ -292,35 +293,108 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
     client = OpenAI(
         base_url=f"{url}/v1",
         api_key=os.getenv("INFERENCE_API_KEY"),
+        timeout=10
     )
 
-    response = client.chat.completions.create(
-        model=llm_model,
-        messages=[
-            {
-                "role": "system",
-                "content": ROLE_KNOWLEDGE
-            },
-            {
-                "role": "user",
-                "content": f"{user_prompt}\n"
-            }
-        ]
-    )
+    for attempt in range(retries + 1):
 
-    print(f"{language + ' | ' if language else ''}inference / {llm_model} | Sending request...", flush=True)
-    started = perf_counter()
+        try:
 
-    answer = response.choices[0].message.content
-    
-    print(f"{language + ' | ' if language else ''}inference / {llm_model} | Finished after {perf_counter() - started:.1f}s")
+            print(
+                f"{language + ' | ' if language else ''}"
+                f"inference / {llm_model} | "
+                f"Sending request "
+                f"(attempt {attempt + 1}/{retries + 1})...",
+                flush=True
+            )
 
-    if not answer or not answer.strip():
-        print("WARNING: Empty answer from inference")
-        return None
+            started = perf_counter()
 
-    return answer
+            response = client.chat.completions.create(
+                model=llm_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": ROLE_KNOWLEDGE
+                    },
+                    {
+                        "role": "user",
+                        "content": f"{user_prompt}\n"
+                    }
+                ]
+            )
 
+            answer = response.choices[0].message.content
+
+            print(
+                f"{language + ' | ' if language else ''}"
+                f"inference / {llm_model} | "
+                f"Finished after "
+                f"{perf_counter() - started:.1f}s"
+            )
+
+            if (
+                answer is None
+                or "[]" in answer
+                or answer.strip() == ""
+            ):
+
+                print("Empty response from inference.")
+
+                if attempt < retries:
+                    wait_time = min(2 ** attempt, 60)
+
+                    print(f"Retrying in {wait_time}s...")
+                        
+
+                    time.sleep(wait_time)
+                    continue
+
+                print(
+                    f"Game Over: empty response for "
+                    f"{culture} | {dimension} | {language}"
+                )
+
+                return None
+
+            return answer
+
+        except (
+            InternalServerError,
+            APIConnectionError,
+            APITimeoutError,
+            RateLimitError
+        ) as e:
+
+            print(
+                f"API error on attempt "
+                f"{attempt + 1}/{retries + 1}:"
+            )
+
+            print(f"{type(e).__name__}: {e}")
+
+            if attempt >= retries:
+
+                print(f"Game Over:{culture} | {dimension} | {language}")
+
+                return None
+
+            wait_time = min(2 ** attempt,60)
+
+            print(f"Retrying in {wait_time}s...")                
+
+            time.sleep(wait_time)
+
+        except Exception as e:
+
+            print(
+                f"Unexpected error: "
+                f"{type(e).__name__}: {e}"
+            )
+
+            return None
+
+    return None
 
 def interweb_model_list():
     API_KEY = "yMbyBst2N4RBPIY8UJAxMFBdzUiaLM1bBoskkitspjxmszNcva8IkKb8tO0OHI0C"
@@ -427,4 +501,3 @@ def json_cleanig(text):
         return object_match.group(0)
 
     return None
-    
