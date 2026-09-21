@@ -127,7 +127,6 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
                     else:
                         knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
 
-                    print(knowledge_text)
                     valid_entries, valid_response = extraction_entries(knowledge_text, json_cleanig)
 
                     language_entries.extend(valid_entries)
@@ -170,6 +169,8 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
         question_counts = None
         if coverage_threshold(stats) == True:
             question_counts = csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict)
+        else:
+            update_empty_knowledge_report(culture, dimension)
 
         if summary_path is None:
             complete = print_dimension_summary(culture, dimension, stats, question_counts)
@@ -183,3 +184,25 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
 
 
     return knowledge_output
+
+def update_empty_knowledge_report(culture, dimension):
+    report_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
+
+    if report_path.exists():
+        with report_path.open("r", encoding="utf-8") as f:
+            report = json.load(f)
+    else:
+        report = []
+
+    report = [
+        entry for entry in report
+        if (entry["culture"], entry["dimension"]) != (culture, dimension)
+    ]
+
+    report.append({
+        "culture": culture,
+        "dimension": dimension
+    })
+
+    with report_path.open("w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
