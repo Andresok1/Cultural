@@ -1,3 +1,5 @@
+from promptingLLM import openrouter_testing
+from questionGen import inference_test
 from result_paths import KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR
 from datetime import datetime
 from duckDuckGo import fetch_raw_results
@@ -33,7 +35,7 @@ parser.add_argument(
 parser.add_argument(
     "--batch_size",
     type=positive_integer, 
-    default=5,
+    default=2,
     help="Documents per collective batch; all valid documents are processed."
 )
 
@@ -78,15 +80,21 @@ csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
 df = pd.read_csv(csv_path)
 dimensions = df["Fine-grained Dimension"].tolist()
 
-dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
-# dimensions= [
+# result = openrouter_testing("google/gemini-3.5-flash-lite")
+# print(result)
+# exit()
+# dimensions = [dimensions[64]]  # Limit to first 10 dimensions for testing
+# print(dimensions)
+# exit()
+
+# dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
+dimensions= [
 #     # "tax & accounting",
-#     # "measuring system",
-#     "tipical food",
-# ]
+    "measuring system",
+    "meeting duration during the business meeting",
+]
 
 timestamp = datetime.now().strftime("%m%d_%H%M")
-
 
 #Result folder cleaning before starting the process
 for results_folder in (KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR):
@@ -96,8 +104,8 @@ for results_folder in (KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR):
 
 cultures= [
     "Colombian",
-    "German",
-    # "Italian",
+#     "German",
+#     "Italian",
 ]
 
 culture_language = {
@@ -106,11 +114,12 @@ culture_language = {
     "Italian": "italian",
 }
 
-all_results = {}    
+all_results = {}
+culture_dfs = {}
 
 for culture in cultures:
     for dimension in dimensions:
-
+        print(dimension)
         key = f"{culture}_{dimension}"
 
         base_query = f"{dimension} in {culture} culture"
@@ -143,10 +152,11 @@ for culture in cultures:
             "languages": languages
         }   
 
-with open(KNOWLEDGE_DIR / "query_results.json", "w", encoding="utf-8") as f:
-    json.dump(all_results, f, ensure_ascii=False, indent=2)
+        with open(KNOWLEDGE_DIR / "query_results.json", "w", encoding="utf-8") as f:
+            json.dump(all_results, f, ensure_ascii=False, indent=2)
 
-knowledge_output= knowledge_level_manager(args, timestamp, all_results)
+        # Finish knowledge and questions before retrieving the next dimension.
+        knowledge_level_manager(args, timestamp, {key: all_results[key]}, culture_dfs)
 
 print("All Done!")
 

@@ -80,18 +80,18 @@ def examination(llm_model, examination_data):
                     reference_answer = question_data["reference_answer"]
                     
                     try: 
-                        # answer = openrouter_student(
-                        #     llm_model, 
-                        #     question, 
-                        #     options,
-                        #     question_format
-                        # )
-                        answer = interweb_student(
+                        answer = openrouter_student(
                             llm_model, 
                             question, 
                             options,
                             question_format
                         )
+                        # answer = interweb_student(
+                        #     llm_model, 
+                        #     question, 
+                        #     options,
+                        #     question_format
+                        # )
 
                         metrics[culture][dimension][question_type]["total"] += 1    #A None answer is still being a response, so it has to be counted in the total.
 
@@ -177,9 +177,17 @@ with open(question_path, "r", encoding="utf-8") as file:
 
 # ]
 
+#interweb
+# models = [
+#     "gpt-4.1-mini", 
+#     "gpt-4o", 
+#     # "llama4:16x17b", 
+#     # "qwen3.5:9b",
+
+#     ]
 models = [
-    "gpt-4.1-mini", 
-    "gpt-4o", 
+    "openai/gpt-5.6-luna", 
+    "qwen/qwen3.7-flash", 
     # "llama4:16x17b", 
     # "qwen3.5:9b",
 

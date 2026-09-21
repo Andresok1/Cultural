@@ -19,12 +19,14 @@ def translate(text, target_lang):
         return text
 
 
-def knowledge_level_manager(args, timestamp, query_results):
+def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None):
     """
     It manages between atomic and collective to organize knowledge generation.
+    Pass a shared culture_dfs to retain CSV rows across dimension-level calls.
     """
 
-    culture_dfs = {} 
+    if culture_dfs is None:
+        culture_dfs = {}
     
     for key, info in query_results.items():
         culture = info.get('culture', [])

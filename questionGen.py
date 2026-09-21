@@ -384,7 +384,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
 
 def inference_create_question(args, text, question_type, culture, dimension, question_language, retries=5, language=None):
     print("Using Inference API!!!")
-    llm_model = "llamacpp/gemma3:4b-f16"
+    llm_model = "vllm/gemma4:26b-a4b-it-bf16"
 
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
@@ -747,3 +747,43 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
                 final_df.to_csv(QUESTIONS_DIR / f"{culture}_Knowledge_QA.csv", index=False, encoding="utf-8-sig")
             else:
                 print(f"Warning: No data to save for culture {culture}")
+
+
+
+def inference_test(llm_model):
+    print("HALLOOOO Inference API!!!")
+
+    load_dotenv()
+    INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
+
+    url = "https://inference.kbs.uni-hannover.de"
+    
+    client = OpenAI(
+        base_url=f"{url}/v1",
+        api_key=os.getenv("INFERENCE_API_KEY"),
+        timeout=10
+    )
+
+    response = client.chat.completions.create(
+        model=llm_model,
+        messages=[
+            {
+                "role": "system",
+                "content": "you are german"
+            },
+            {
+                "role": "user",
+                "content": "tell me an story about colombia"
+            }
+        ]
+    )
+
+
+
+    answer = response.choices[0].message.content
+
+
+
+
+
+

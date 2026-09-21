@@ -94,7 +94,7 @@ def openai_create_knowledge(args, text, culture, dimension, language=None):
     return content
 
 
-def interweb_create_knowledge(args, text, culture, dimension, retries = 5, language=None):
+def interweb_create_knowledge(args, text, culture, dimension, retries = 1, language=None):
     """
     Extracts important features and content related to a specific culture using Interweb API
     from a given text. Returns format: title, original snippet and knowledge extrated from
@@ -268,10 +268,10 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5, langu
     return answer
 
 
-def inference_create_knowledge(args, text=None, culture=None, dimension=None, retries=5, language=None):
+def inference_create_knowledge(args, text=None, culture=None, dimension=None, retries=1, language=None):
     print("Using Inference API!!!")
-    llm_model = "llamacpp/gemma3:4b-f16"
-
+    llm_model = "vllm/gemma4:26b-a4b-it-bf16"
+    # llamacpp/gemma3:4b-f16
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
 
@@ -501,3 +501,51 @@ def json_cleanig(text):
         return object_match.group(0)
 
     return None
+
+
+def openrouter_testing(llm_model):
+
+    load_dotenv()
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+    url = "https://openrouter.ai"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}"
+    }
+
+    
+    data = {
+        "model": f"{llm_model}",  # Replace with the model available in your API. gpt-4o-mini
+        "messages": [
+            {
+                "role": "system",
+                "content": "you are colombian in the Moon",
+            },
+            {
+                "role": "user",
+                "content": "HALLooo "
+            }
+        ]
+    }
+
+
+    started = perf_counter()
+    response = requests.post(
+        f"{url}/api/v1/chat/completions",
+        headers=headers,
+        json=data,
+        timeout=60
+    )
+
+    response.raise_for_status()
+
+    answer = response.json()["choices"][0]["message"]["content"]
+
+
+    if not answer or not answer.strip():
+        print("WARNING: Empty answer from OpenRouter")
+        return None
+
+    return answer
