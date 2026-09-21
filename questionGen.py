@@ -39,7 +39,6 @@ def random_llm(selected_format):
      
     
 
-
 def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english", ):
 
     question_formats = {
@@ -158,6 +157,7 @@ def openai_create_question(text, question_type, culture, question_language):
     Returns format: title, snippet and knowledge extracted from the text.
     Does not invent information if there is insufficient support.
     """
+    openai_model = "gpt-4o-mini"
 
     if not text:
 
@@ -184,15 +184,17 @@ def openai_create_question(text, question_type, culture, question_language):
         language = "English"
 
     instruction = QUESTION_TYPES[question_type]
-
-    prompt, selected_format= PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
+    prompt, selected_format= PROMPT_QUESTION(instruction, prompt_texts, question_type, language)
 
     load_dotenv()
 
-    client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
+    client = OpenAI(
+        api_key= os.getenv("OPENAI_API_KEY"),
+        base_url="https://api.openai.com/v1"
+    )
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",   #OPENAI constant Model
+        model= openai_model, 
         messages=[{"role": "user", "content": ROLE_QUESTION + prompt}]
     )
 
@@ -203,6 +205,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
     """ 
 
     """
+    interweb_model = "gpt-4o-mini"
     if not text:
         print("No documents were given to produce a question.")
         return None
@@ -229,7 +232,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
 
     instruction = QUESTION_TYPES[question_type]
 
-    prompt, selected_format = PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
+    prompt, selected_format = PROMPT_QUESTION(instruction, prompt_texts, question_type, language)
 
     load_dotenv()
     INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
@@ -242,7 +245,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
     }
 
     payload = {
-        "model": args.llm_model, #Model can be changed.
+        "model": interweb_model, #Model can be changed.
         "messages": [
             {
                 "role": "system",
@@ -315,6 +318,8 @@ def interweb_create_question(args, text, question_type, culture, question_langua
 
 def openrouter_create_question(args, text, question_type, culture, dimension, question_language, retries=5):
 
+    openrouter_model = "openai/gpt-4o"
+     
     if not text:
             print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
 
@@ -341,7 +346,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
 
     instruction = QUESTION_TYPES[question_type]
 
-    prompt, selected_format = PROMPT_QUESTION(language, instruction, prompt_texts, question_type)
+    prompt, selected_format = PROMPT_QUESTION(instruction, prompt_texts, question_type, language)
 
     load_dotenv()
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -354,7 +359,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
     }
 
     data = {
-        "model": f"openai/{args.llm_model}",
+        "model": openrouter_model,
         "messages": [
             {
                 "role": "system",
@@ -383,8 +388,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
 
 
 def inference_create_question(args, text, question_type, culture, dimension, question_language, retries=5, language=None):
-    print("Using Inference API!!!")
-    llm_model = "vllm/gemma4:26b-a4b-it-bf16"
+    inference_model = "vllm/gemma4:26b-a4b-it-bf16"
 
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
@@ -405,7 +409,7 @@ def inference_create_question(args, text, question_type, culture, dimension, que
 
     instruction = QUESTION_TYPES[question_type]
 
-    prompt, selected_format = PROMPT_QUESTION(instruction, prompt_texts, question_type, language=language)
+    prompt, selected_format = PROMPT_QUESTION(instruction, prompt_texts, question_type, language)
 
     client = OpenAI(
         base_url=f"{url}/v1",
@@ -413,7 +417,7 @@ def inference_create_question(args, text, question_type, culture, dimension, que
     )
 
     response = client.chat.completions.create(
-        model=llm_model,
+        model=inference_model,
         messages=[
             {
                 "role": "system",
@@ -426,12 +430,12 @@ def inference_create_question(args, text, question_type, culture, dimension, que
         ]
     )
 
-    print(f"{language + ' | ' if language else ''}inference / {llm_model} | Sending request...", flush=True)
+    print(f"{language + ' | ' if language else ''}inference / {inference_model} | Sending request...", flush=True)
     started = perf_counter()
 
     answer = response.choices[0].message.content
     
-    print(f"{language + ' | ' if language else ''}inference / {llm_model} | Finished after {perf_counter() - started:.1f}s")
+    print(f"{language + ' | ' if language else ''}inference / {inference_model} | Finished after {perf_counter() - started:.1f}s")
 
     if not answer or not answer.strip():
         print("WARNING: Empty answer from inference")
@@ -439,34 +443,23 @@ def inference_create_question(args, text, question_type, culture, dimension, que
 
     return answer, selected_format
 
-
-
-
-
-
-
-
-
-
-
-
-
 def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
     """Prepare valid knowledge and record dimensions empty across all languages."""
+
     knowledge_list = []
     title_list = []
     snippet_list = []
-    emptyKnowledge = []
-    knowledge_items = knowledge_output_dict[culture][dimension]
 
-    for lang, knowledge_set in knowledge_items.items():
+    for lang, knowledge_set in knowledge_output_dict[culture][dimension].items():
         try:
             items = json.loads(knowledge_set) if isinstance(knowledge_set, str) and knowledge_set.strip() else (knowledge_set or [])
         except json.JSONDecodeError:
             print(f"Warning: invalid JSON for {culture} | {dimension} | {lang}, skipping")
             continue
+
         if isinstance(items, dict):
             items = [items]
+
         if not isinstance(items, list):
             print(f"Warning: invalid knowledge format for {culture} | {dimension} | {lang}, skipping")
             continue
@@ -474,37 +467,27 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
         for data in items:
             if not isinstance(data, dict):
                 continue
-            know = data.get('Knowledge') or data.get('knowledge')
-            titl = data.get('Title') or data.get('title')
-            snipp = data.get('Snippet') or data.get('snippet')
+
+            know = data.get("Knowledge") or data.get("knowledge")
+            titl = data.get("Title") or data.get("title")
+            snipp = data.get("Snippet") or data.get("snippet")
+
             if isinstance(know, list):
-                know = ", ".join(str(value) for value in know)
-            if not all(isinstance(value, str) and value.strip().upper() not in ("", "EMPTY")
-                       for value in (know, titl, snipp)):
+                know = ", ".join(map(str, know))
+
+            if not all(isinstance(v, str) and v.strip() and v.upper() != "EMPTY" for v in (know, titl, snipp)):
                 continue
+
             if "NOT RELEVANT INFORMATION" in titl.upper():
                 continue
+
             knowledge_list.append(know.replace(";", ",").strip())
             title_list.append(titl.replace(";", ",").strip())
             snippet_list.append(snipp.replace(";", ",").strip())
 
-    if not knowledge_list:
-        emptyKnowledge.append({"culture": culture, "dimension": dimension})
-
-    report_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
-    if os.path.exists(report_path):
-        with open(report_path, "r", encoding="utf-8") as f:
-            report = json.load(f)
-    else:
-        report = []
-    # Replace this culture/dimension's previous status; preserve other results.
-    report = [entry for entry in report
-              if (entry["culture"], entry["dimension"]) != (culture, dimension)]
-    report.extend(emptyKnowledge)
-    with open(report_path, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
-
     print(f"Question | {culture} | {dimension} | Knowledge entries: {len(knowledge_list)}")
+
+
     return knowledge_list, title_list, snippet_list
 
 def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
@@ -691,7 +674,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     model = "gpt-4.1-mini" if args.api == "openai" else args.llm_model
     print(f"{args.api} / {model} | Sending request...", flush=True)
     for typ in types:
-        question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension, knowledge_list, typ)
+        question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension,knowledge_list=knowledge_list, typ=typ)
         if all(isinstance(value, str) and value.strip()
                and value.strip().upper() != "EMPTY"
                and "NOT ENOUGH INFORMATION" not in value.upper()
