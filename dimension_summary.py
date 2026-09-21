@@ -81,6 +81,26 @@ def print_dimension_summary(culture, dimension, stats, questions):
     print("\nExecution status: COMPLETED")
     print(f"Experimental status: {'COMPLETE' if complete else 'INCOMPLETE'}")
     print("===============================")
+    return complete
+
+
+def write_summary(text, summary_path=None):
+    print(text)
+    if summary_path is not None:
+        with open(summary_path, "a", encoding="utf-8") as report:
+            report.write(text + "\n")
+
+
+def print_experiment_summary(counts, summary_path=None, culture=None):
+    culture_label = f"Culture: {culture}\n" if culture is not None else ""
+    write_summary(
+        "\n" + "=" * 50 + "\nEXPERIMENT SUMMARY\n"
+        + culture_label
+        + f"Dimensions: {counts['complete'] + counts['incomplete']}\n"
+        f"Complete:      {counts['complete']}\n"
+        f"Incomplete:    {counts['incomplete']}",
+        summary_path,
+    )
 
 
 def coverage_threshold(stats, show=False):

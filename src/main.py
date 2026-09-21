@@ -1,6 +1,7 @@
 from promptingLLM import openrouter_testing
 from questionGen import inference_test
-from result_paths import KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR
+from result_paths import RESULTS_DIR, KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR
+from dimension_summary import print_experiment_summary
 from datetime import datetime
 from duckDuckGo import fetch_raw_results
 from knowledgeGen import knowledge_level_manager, translate
@@ -116,6 +117,9 @@ culture_language = {
 
 all_results = {}
 culture_dfs = {}
+experiment_counts = {culture: {"complete": 0, "incomplete": 0} for culture in cultures}
+summary_path = RESULTS_DIR / f"experiment_summary_{datetime.now():%Y%m%d_%H%M%S_%f}.txt"
+summary_path.write_text("", encoding="utf-8")
 
 for culture in cultures:
     for dimension in dimensions:
@@ -156,7 +160,10 @@ for culture in cultures:
             json.dump(all_results, f, ensure_ascii=False, indent=2)
 
         # Finish knowledge and questions before retrieving the next dimension.
-        knowledge_level_manager(args, timestamp, {key: all_results[key]}, culture_dfs)
+        knowledge_level_manager(
+            args, timestamp, {key: all_results[key]}, culture_dfs,
+            summary_path=summary_path, experiment_counts=experiment_counts[culture],
+        )
 
 print("All Done!")
 
@@ -166,4 +173,8 @@ if empty_knowledge_path.exists():
         empty_knowledge = json.load(f)
     if empty_knowledge:
         print("\nemptyKnowledge is not empty. Check results/knowledge/emptyKnowledge.json.")
+
+for culture, counts in experiment_counts.items():
+    print_experiment_summary(counts, summary_path, culture=culture)
+print(f"Summary saved to: {summary_path}")
 

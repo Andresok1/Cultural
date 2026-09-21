@@ -1,7 +1,9 @@
 from result_paths import KNOWLEDGE_DIR
 import json
 import os
-from dimension_summary import extraction_entries, print_dimension_summary, coverage_threshold
+from contextlib import redirect_stdout
+from io import StringIO
+from dimension_summary import extraction_entries, print_dimension_summary, coverage_threshold, write_summary
 
 from questionGen import csv_saver
 from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge, inference_create_knowledge
@@ -20,7 +22,8 @@ def translate(text, target_lang):
         return text
 
 
-def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None):
+def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
+                            summary_path=None, experiment_counts=None):
     """
     It manages between atomic and collective to organize knowledge generation.
     Pass a shared culture_dfs to retain CSV rows across dimension-level calls.
@@ -168,7 +171,15 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None):
         if coverage_threshold(stats) == True:
             question_counts = csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict)
 
-        print_dimension_summary(culture, dimension, stats, question_counts)
+        if summary_path is None:
+            complete = print_dimension_summary(culture, dimension, stats, question_counts)
+        else:
+            summary_output = StringIO()
+            with redirect_stdout(summary_output):
+                complete = print_dimension_summary(culture, dimension, stats, question_counts)
+            write_summary(summary_output.getvalue().rstrip("\n"), summary_path)
+        if experiment_counts is not None:
+            experiment_counts["complete" if complete else "incomplete"] += 1
 
 
     return knowledge_output
