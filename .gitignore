@@ -19,3 +19,5 @@ __pycache__/
 *.csv
 *.json
 
+#enviroment
+venv/

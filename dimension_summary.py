@@ -1,4 +1,3 @@
-"""Dimension reporting; coverage measures successfully processed documents."""
 import json 
 
 def extraction_entries(text, clean):
