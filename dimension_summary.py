@@ -69,9 +69,9 @@ def print_dimension_summary(culture, dimension, stats, questions):
     complete = full_coverage and entries > 0 and all_questions_generated
 
     print(f"\nDIMENSION FINISHED\n\nCulture: {culture}\nDimension: {dimension}")
-    print(f"\nRetrieval\nValid documents: {valid}")
-    print(f"\nKnowledge extraction\nProcessed documents: {processed}")
-    print(f"Knowledge entries: {entries}\nCoverage: {coverage(processed, valid)}")
+    print(f"\nRetrieval\n   Valid documents: {valid}")
+    print(f"\nKnowledge extraction\n    Processed documents: {processed}")
+    print(f"    Knowledge entries: {entries}\n  Coverage: {coverage(processed, valid)}")
 
     print("\nCoverage by language (processed / valid documents)")
 
@@ -117,13 +117,14 @@ def coverage_threshold(stats, show=False):
 
 
         coverage_lang[lang] = {
+            "relation": f"({item['processed']}/{item['valid']})",
             "coverage": coverage,
             "valid": valid
         }
 
     if show:
         for lang, values in coverage_lang.items():
-            print(f"{lang}: coverage={values['coverage']}, valid={values['valid']}")
+            print(f"    {lang}: relation={values['relation']}, coverage={values['coverage']}, valid={values['valid']}")
 
 
     return valid
