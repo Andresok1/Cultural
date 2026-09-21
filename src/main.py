@@ -77,18 +77,11 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
-df = pd.read_csv(csv_path)
-dimensions = df["Fine-grained Dimension"].tolist()
+# csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
+# df = pd.read_csv(csv_path)
+# dimensions = df["Fine-grained Dimension"].tolist()
 
-# result = openrouter_testing("google/gemini-3.5-flash-lite")
-# print(result)
-# exit()
-# dimensions = [dimensions[64]]  # Limit to first 10 dimensions for testing
-# print(dimensions)
-# exit()
 
-# dimensions= random.sample(dimensions, 2)        #JUST TO TESTING
 dimensions= [
 #     # "tax & accounting",
     "measuring system",
