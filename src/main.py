@@ -91,7 +91,7 @@ dimensions = df["Fine-grained Dimension"].tolist()
 dimensions= [
 #     # "tax & accounting",
     "measuring system",
-    "meeting duration during the business meeting",
+    # "meeting duration during the business meeting",
 ]
 
 timestamp = datetime.now().strftime("%m%d_%H%M")

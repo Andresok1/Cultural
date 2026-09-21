@@ -673,14 +673,15 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict):
     '''This function prepares the question data to deliver it in `.csv` format and save it in the `results` folder.
     return:
-        None.
+        Counts of requested and successfully generated questions.
     '''
 
     knowledge_list, title_list, snippet_list= knowledge_preparing(args, culture, dimension, knowledge_output_dict)
+    question_counts = 0
 
     if not knowledge_list:
         print("Skipped: no relevant knowledge.")
-        return
+        return question_counts
 
     if args.question_type == "all":
         types = ["factual", "conceptual", "misleading", "multihop"]
@@ -691,6 +692,11 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     print(f"{args.api} / {model} | Sending request...", flush=True)
     for typ in types:
         question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension, knowledge_list, typ)
+        if all(isinstance(value, str) and value.strip()
+               and value.strip().upper() != "EMPTY"
+               and "NOT ENOUGH INFORMATION" not in value.upper()
+               for value in (question, reference_answer)):
+            question_counts += 1
 
         output_path = KNOWLEDGE_DIR / f"knowledge_output_{timestamp}.json"
 
@@ -702,7 +708,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
 
         df_dimension = pd.DataFrame([{"culture": culture, "dimension": dimension}])
 
-        data_knowledge_info = {}    #TODO: The structure can be in groups of 3. 
+        data_knowledge_info = {} 
         for i, (t, s, k) in enumerate(zip(title_list, snippet_list, knowledge_list), start=1):
             data_knowledge_info[f"title_{i}"] = [t]
             data_knowledge_info[f"snippet_{i}"] = [s]
@@ -748,6 +754,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
             else:
                 print(f"Warning: No data to save for culture {culture}")
 
+    return question_counts
 
 
 def inference_test(llm_model):
