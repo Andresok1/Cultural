@@ -1,6 +1,7 @@
 from result_paths import KNOWLEDGE_DIR
 import json
 import os
+from dimension_summary import extraction_entries, print_dimension_summary, coverage_threshold
 
 from questionGen import csv_saver
 from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge, inference_create_knowledge
@@ -31,7 +32,25 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None):
     for key, info in query_results.items():
         culture = info.get('culture', [])
         dimension = info.get('dimension')
-        languages  = info.get('languages', [])
+        languages = info.get('languages', {})
+        stats = {}
+        for lang, data in languages.items():
+            valid_documents = 0
+            for document in data.get("ranking", []):
+                if isinstance(document, dict):
+                    content = document.get("text")
+                else:
+                    content = document
+
+                if content:
+                    valid_documents += 1
+
+            stats[lang] = {
+                "valid": valid_documents,
+                "processed": 0,
+                "entries": 0,
+                "invalid": 0,
+            }
 
         if culture not in culture_dfs:
             culture_dfs[culture] = []
@@ -70,43 +89,8 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None):
             print(f"- {lang}: {len(data.get('ranking', []))}")
         total = sum(len(data.get("ranking", [])) for data in languages.values())
         print(f"--------TOTAL: {total} --------\n")
-
-        if args.knowledge_level == "atomic":
-            for lang, data in languages.items():
-                query_by_language = data.get("query", [])
-                ranking = data.get("ranking", [])
-                
-                count_by_language = 0
-
-                for document in ranking:
-                    content = document.get("text", "") if isinstance(document, dict) else document
-                    if content:
-                        knowledge_input.append(document) 
-                        if args.api == "openai":
-                            knowledge_text= openai_create_knowledge(args, text=content, culture=culture, dimension=dimension)
-                        elif args.api == "openrouter":
-                            knowledge_text = openrouter_create_knowledge(args, text=content, culture=culture, dimension=dimension)
-                        else:
-                            knowledge_text = interweb_create_knowledge(args, text=content, culture=culture, dimension=dimension) #Atomic
-                            #IF here it says something about (info missing) it should look for more docs
-
-                        knowledge_output.append(knowledge_text)   
-                        count_by_language += 1
-
-                    if count_by_language == 3:
-                        break
-
-                print("\n")
-                print(f"For key {key} in {lang}:")
-
-                count += count_by_language
-            
-            print(f"After all languages the total Counter for {key} is now: {count}")
-
-            if count < args.max_results:
-                print(f"DOCS MISSING {count}/{args.max_results}")
-
-        else: # collective: evaluate each batch within the existing language loop
+        if args.knowledge_level == "collective":
+# collective:
             print(f"Knowledge | {culture} | {dimension}")
             if args.batch_size <= 0:
                 raise ValueError("batch_size must be positive")
@@ -140,40 +124,19 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None):
                     else:
                         knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
 
-                    knowledge_text_cleaned = json_cleanig(knowledge_text or "")
-                    try:
-                        entries = json.loads(knowledge_text_cleaned) if knowledge_text_cleaned else []
+                    print(knowledge_text)
+                    valid_entries, valid_response = extraction_entries(knowledge_text, json_cleanig)
 
-                        if isinstance(entries, dict):
-                            entries = [entries]
+                    language_entries.extend(valid_entries)
+                    
+                    stats[lang]["entries"] += len(valid_entries)
 
-                        valid_entries = []
-
-                        required_fields = ("title", "snippet", "knowledge")
-
-                        for entry in entries:
-
-                            if not isinstance(entry, dict):
-                                continue
-
-                            title = entry.get("title", "")
-
-                            if "NOT RELEVANT INFORMATION" in str(title).upper():
-                                continue
-
-                            fields_are_valid = all(
-                                isinstance(entry.get(field), str)
-                                and entry[field].strip().upper() not in ("", "EMPTY")
-                                for field in required_fields
-                            )
-
-                            if fields_are_valid:
-                                valid_entries.append(entry)
-
-                        language_entries.extend(valid_entries)
+                    if valid_response:
+                        stats[lang]["processed"] += len(knowledge_input_cache)
                         print(f"{batch_label} | Knowledge entries: {len(valid_entries)}")
-                    except (json.JSONDecodeError, TypeError):
-                        print(f"{batch_label} | Knowledge entries: unknown (invalid response)")
+                    else:
+                        stats[lang]["invalid"] += 1
+                        print(f"{batch_label} | Invalid response; documents not counted as processed")
 
                 knowledge_text_cleaned = json.dumps(language_entries, ensure_ascii=False)
                 knowledge_output.append(knowledge_text_cleaned)
@@ -201,8 +164,11 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None):
         with open(input_path, "w", encoding="utf-8") as f:      #Save knowledge_input
             json.dump(knowledge_input_dict, f, ensure_ascii=False, indent=2)
 
-        csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict)
+        question_counts = None
+        if coverage_threshold(stats) == True:
+            question_counts = csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict)
+
+        print_dimension_summary(culture, dimension, stats, question_counts)
 
 
     return knowledge_output
-
