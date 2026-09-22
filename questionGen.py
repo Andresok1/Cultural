@@ -44,40 +44,39 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
     question_formats = {
 
         "single_choice": """
-        Question: {question}
+        Question: [question]
         Options:
-        A) {option_a}
-        B) {option_b}
-        C) {option_c}
-        D) {option_d}
+        A) [option_a]
+        B) [option_b]
+        C) [option_c]
+        D) [option_d]
 
-        Reference Answer: {answer}
+        Reference Answer: [answer]
         """,
 
         "true_false": """
-        Question: Is the following statement true or false? {question}
+        Question: Is the following statement true or false? [question]
         Options: "NA"
-        Reference Answer: {answer}
+        Reference Answer: [answer]
         """,
 
         "fill_the_blank": """
-        Question: Complete the sentence: {question}
+        Question: Complete the sentence: [question]
         Options: "NA"
-        Reference Answer: {answer}
+        Reference Answer: [answer]
         """,
 
         "short_answer": """
-        Question: Write a short essay answering the following question. Expected answer length: 3-5 sentences. {question}. 
+        Question: Write a short essay answering the following question. Expected answer length: 3-5 sentences. [question]
         Options: "NA"
-        Reference Answer: {answer}
+        Reference Answer: [answer]
 
         """,
 
         "long_answer": """
-        Question: Write an essay answering the following question and also explain the reasoning step by step. Expected answer length: 5-8 sentences. {question}
+        Question: Write an essay answering the following question and also explain the reasoning step by step. Expected answer length: 5-8 sentences. [question]
         Options: "NA"
-        Reference Answer:
-        {answer}
+        Reference Answer:[answer]
 
         """
     }
@@ -139,7 +138,8 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
         1. The question should avoid explicitly mentioning cultural concepts, terminology, or characteristics, in order to effectively assess the student’s understanding of cultural traits.
         2. A reference answer should be provided after the question.
         3. Do not change the structure of format given. Just fill in the content after these labels.
-        4. If the provided information is insufficient to generate a meaningful question, do not ask for clarification and do not provide an explanation. Instead, keep the exact same format and write "Not Enough Information" in the appropriate fields.
+        4. If the provided information is insufficient to generate a meaningful question, do not ask for clarification and do not provide an explanation. Instead, keep the exact same format and write "EMPTY" in all fields.
+        5. STRICT OUTPUT FORMAT: Replace only the content inside the brackets []. Your response must contain only the final values that belong inside those brackets. Do not provide reasoning, explanations, justifications, summaries, introductions, conclusions, markdown, or any additional text. Any text outside the required placeholders will be considered an invalid response.
 
         Now generate the output.
         """
@@ -675,10 +675,22 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     print(f"{args.api} / {model} | Sending request...", flush=True)
     for typ in types:
         question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension,knowledge_list=knowledge_list, typ=typ)
-        if all(isinstance(value, str) and value.strip()
-               and value.strip().upper() != "EMPTY"
-               and "NOT ENOUGH INFORMATION" not in value.upper()
-               for value in (question, reference_answer)):
+        checks = {
+            "question_not_string": not isinstance(question, str),
+            "question_empty": not question.strip(),
+            "question_is_EMPTY": question.strip().upper() == "EMPTY",
+            "question_not_enough_information": "NOT ENOUGH INFORMATION" in question.upper(),
+            "answer_not_string": not isinstance(reference_answer, str),
+            "answer_empty": not reference_answer.strip(),
+            "answer_is_EMPTY": reference_answer.strip().upper() == "EMPTY",
+            "answer_not_enough_information": "NOT ENOUGH INFORMATION" in reference_answer.upper()
+        }
+
+        failed = [name for name, result in checks.items() if result]
+
+        if failed:
+            print("Question rejected because:", failed)
+        else:
             question_counts += 1
 
         output_path = KNOWLEDGE_DIR / f"knowledge_output_{timestamp}.json"
