@@ -279,8 +279,8 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5, langu
     return answer
 
 
-def inference_create_knowledge(args, text=None, culture=None, dimension=None, retries=1, language=None):
-    inference_model = "vllm/gemma4:26b-a4b-it-bf16"
+def inference_create_knowledge(args, text=None, culture=None, dimension=None, retries=2, language=None):
+    inference_model = "granite-4.1:8b-bf16"
     # llamacpp/gemma3:4b-f16
 
     load_dotenv()
@@ -304,7 +304,7 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
     client = OpenAI(
         base_url=f"{url}/v1",
         api_key=os.getenv("INFERENCE_API_KEY"),
-        timeout=10
+        timeout=300,
     )
 
     for attempt in range(retries + 1):
@@ -382,6 +382,10 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
                 f"{attempt + 1}/{retries + 1}:"
             )
 
+            print(
+                f"Timeout after {perf_counter()-started:.1f}s"
+            )
+
             print(f"{type(e).__name__}: {e}")
 
             if attempt >= retries:
@@ -390,7 +394,7 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
 
                 return None
 
-            wait_time = min(2 ** attempt,60)
+            wait_time = min(15 * (2 ** attempt), 60)
 
             print(f"Retrying in {wait_time}s...")                
 
