@@ -167,18 +167,21 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
             json.dump(knowledge_input_dict, f, ensure_ascii=False, indent=2)
 
         question_counts = None
-        if coverage_threshold(stats) == True:
+
+        valid_process = coverage_threshold(stats)
+        if valid_process == True:
             question_counts = csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict)
         else:
             update_empty_knowledge_report(culture, dimension)
 
         if summary_path is None:
-            complete = print_dimension_summary(culture, dimension, stats, question_counts)
+            complete = print_dimension_summary(culture, dimension, stats, question_counts, valid_process)
         else:
             summary_output = StringIO()
             with redirect_stdout(summary_output):
-                complete = print_dimension_summary(culture, dimension, stats, question_counts)
+                complete = print_dimension_summary(culture, dimension, stats, question_counts, valid_process)
             write_summary(summary_output.getvalue().rstrip("\n"), summary_path)
+            
         if experiment_counts is not None:
             experiment_counts["complete" if complete else "incomplete"] += 1
 
