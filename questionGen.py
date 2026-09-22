@@ -388,7 +388,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
 
 
 def inference_create_question(args, text, question_type, culture, dimension, question_language, retries=5, language=None):
-    inference_model = "vllm/gemma4:26b-a4b-it-bf16"
+    inference_model = "granite-4.1:8b-bf16"
 
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
@@ -414,6 +414,7 @@ def inference_create_question(args, text, question_type, culture, dimension, que
     client = OpenAI(
         base_url=f"{url}/v1",
         api_key=os.getenv("INFERENCE_API_KEY"),
+        timeout=300,
     )
 
     response = client.chat.completions.create(
@@ -512,7 +513,6 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
     if dimension not in question_vector[culture]:
         question_vector[culture][dimension] = {}
-
 
     started = perf_counter()
     if args.api == "openai":
@@ -671,8 +671,6 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     else: 
         types = [args.question_type]
 
-    model = "gpt-4.1-mini" if args.api == "openai" else args.llm_model
-    print(f"{args.api} / {model} | Sending request...", flush=True)
     for typ in types:
         question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension,knowledge_list=knowledge_list, typ=typ)
         checks = {
