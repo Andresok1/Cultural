@@ -47,31 +47,24 @@ def extraction_entries(text, clean):
     return valid_entries, valid_response
 
 
-def print_dimension_summary(culture, dimension, stats, questions):
+def print_dimension_summary(culture, dimension, stats, questions, valid_process):
     valid = sum(item["valid"] for item in stats.values())
     processed = sum(item["processed"] for item in stats.values())
+    invalid = sum(item["invalid"] for item in stats.values())
     entries = sum(item["entries"] for item in stats.values())
-    def coverage(done, total):
+    def general_coverage(done, total):
         return f"{100 * done / total:.1f}%" if total else "N/A"
 
-    full_coverage = bool(stats)
-    for item in stats.values():
-        if item["valid"] == 0 or item["processed"] != item["valid"]:
-            full_coverage = False
-        if item["invalid"] > 0:
-            full_coverage = False
+    all_questions_generated = (questions == 4)
 
-    if questions == 4:
-        all_questions_generated = True
-    else: 
-        all_questions_generated = False
-
-    complete = full_coverage and entries > 0 and all_questions_generated
+    complete =  valid_process and entries > 0 and all_questions_generated
 
     print(f"\nDIMENSION FINISHED\n\nCulture: {culture}\nDimension: {dimension}")
     print(f"\nRetrieval\n   Valid documents: {valid}")
     print(f"\nKnowledge extraction\n    Processed documents: {processed}")
-    print(f"    Knowledge entries: {entries}\n  Coverage: {coverage(processed, valid)}")
+    print(f"\nQuestions generation\n    Questions: {questions}")
+
+    print(f"    Knowledge entries: {entries}\n  Coverage: {general_coverage(processed, valid)}")
 
     print("\nCoverage by language (processed / valid documents)")
 
