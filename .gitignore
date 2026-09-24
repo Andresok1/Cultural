@@ -24,6 +24,7 @@ __pycache__/
 *.svg
 experiment_summary_*.txt
 terminal_output_*.txt
+exam_terminal_output_*.txt
 
 #enviroment
 venv/
