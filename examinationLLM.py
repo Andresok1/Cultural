@@ -1,13 +1,63 @@
 from result_paths import EXAM_DIR, QUESTIONS_DIR
 from pathlib import Path
 import json
+import shutil
+import atexit
+import sys
+from datetime import datetime
 from graphics import df_model_culture_dimension, plot_model_culture_accuracy, plot_model_culture_qtype_accuracy, plot_model_questiontype_accuracy, plot_model_culture_dimension
 from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student, openai_grader
-from datetime import datetime
 import pandas as pd
 
 
 BASE_DIR = Path(__file__).resolve().parent
+
+class TerminalCapture:
+    def __init__(self, terminal, document):
+        self.terminal = terminal
+        self.document = document
+
+    def write(self, text):
+        self.terminal.write(text)
+        self.document.write(text)
+        self.document.flush()
+
+    def flush(self):
+        self.terminal.flush()
+        self.document.flush()
+
+
+def setup_examination_output():
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    output_path = EXAM_DIR / f"exam_terminal_output_{timestamp}.txt"
+    output_document = output_path.open("w", encoding="utf-8")
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
+    terminal_capture = TerminalCapture(sys.stdout, output_document)
+    sys.stdout = terminal_capture
+    sys.stderr = terminal_capture
+
+    def close_terminal_output():
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        output_document.close()
+
+    atexit.register(close_terminal_output)
+
+    return output_path
+
+
+def clear_exam_directory():
+    for item in EXAM_DIR.iterdir():
+        if item.is_dir():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
+
+
+clear_exam_directory()
+setup_examination_output()
 
 def print_banner(text):
     width = len(text) + 10
@@ -15,6 +65,65 @@ def print_banner(text):
     print("╭" + "─" * (width - 2) + "╮")
     print("│" + text.center(width - 2) + "│")
     print("╰" + "─" * (width - 2) + "╯")
+
+
+def print_examination_summary(df_detail):
+    culture_summary = (
+        df_detail
+        .groupby(["model", "culture"])
+        .agg(correct=("correct", "sum"), total=("total", "sum"))
+        .reset_index()
+    )
+    culture_summary["accuracy"] = (
+        culture_summary["correct"] / culture_summary["total"]
+    )
+
+    category_summary = df_model_culture_dimension(df_detail)
+
+    question_type_summary = (
+        df_detail
+        .groupby(["model", "culture", "question_type"])
+        .agg(correct=("correct", "sum"), total=("total", "sum"))
+        .reset_index()
+    )
+    question_type_summary["accuracy"] = (
+        question_type_summary["correct"] /
+        question_type_summary["total"]
+    )
+
+    print_banner("EXAMINATION SUMMARY")
+
+    for model in sorted(df_detail["model"].unique()):
+        print("\n" + "*" * 72)
+        print(f"*** Results for student model: {model} ***")
+        print("*" * 72)
+
+        print("\nAccuracy by culture")
+        print(
+            culture_summary[culture_summary["model"] == model][
+                ["culture", "correct", "total", "accuracy"]
+            ]
+            .assign(accuracy=lambda table: table["accuracy"].map("{:.2%}".format))
+            .to_string(index=False)
+        )
+
+        print("\nAccuracy by category")
+        print(
+            category_summary[category_summary["model"] == model][
+                ["culture", "category", "correct", "total", "accuracy"]
+            ]
+            .assign(accuracy=lambda table: table["accuracy"].map("{:.2%}".format))
+            .to_string(index=False)
+        )
+
+        print("\nAccuracy by question type")
+        print(
+            question_type_summary[question_type_summary["model"] == model][
+                ["culture", "question_type", "correct", "total", "accuracy"]
+            ]
+            .assign(accuracy=lambda table: table["accuracy"].map("{:.2%}".format))
+            .to_string(index=False)
+        )
 
 def normalize_answer(text):
     return text.strip().lower().replace(".", "").replace(",", "")
