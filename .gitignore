@@ -18,6 +18,12 @@ __pycache__/
 #results
 *.csv
 *.json
+*.png
+*.jpg
+*.jpeg
+*.svg
+experiment_summary_*.txt
+terminal_output_*.txt
 
 #enviroment
 venv/
