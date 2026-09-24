@@ -149,6 +149,9 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
         if GRADER_ENDPOINT == "openai":
             result= openai_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
 
+        if result is None:
+            raise RuntimeError("Grader returned no answer")
+
         if result == "PASS":
             point += 1
     elif question_type == "long_answer":
@@ -156,6 +159,9 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
             result= openrouter_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
         if GRADER_ENDPOINT == "openai":
             result= openai_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
+
+        if result is None:
+            raise RuntimeError("Grader returned no answer")
 
         if result == "PASS":
             point += 1
@@ -165,6 +171,7 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
 def examination(llm_model, examination_data, student):
     answers = {}
     metrics = {}
+    failed_questions = []
     correct_counter = 0
 
     print("Evaluating:", llm_model)
@@ -270,12 +277,31 @@ def examination(llm_model, examination_data, student):
 
                             metrics[culture][dimension][question_type]["correct"] += point
 
+                        else:
+                            failed_question = {
+                                "model": llm_model,
+                                "culture": culture,
+                                "dimension": dimension,
+                                "type": question_type
+                            }
+                            if failed_question not in failed_questions:
+                                failed_questions.append(failed_question)
+
                     except Exception as e:
                         
                         print(
                             f"FAILED during {stage}: "
                             f"{type(e).__name__}: {e}"
                         )
+
+                        failed_question = {
+                            "model": llm_model,
+                            "culture": culture,
+                            "dimension": dimension,
+                            "type": question_type
+                        }
+                        if failed_question not in failed_questions:
+                            failed_questions.append(failed_question)
 
                         answer = None
 
@@ -299,7 +325,7 @@ def examination(llm_model, examination_data, student):
                     correct / total if total > 0 else 0
                 )
 
-    return accuracy, answers, metrics
+    return accuracy, answers, metrics, failed_questions
 
 
 print_banner("STARTING EXAM")
@@ -345,16 +371,20 @@ models = STUDENT_MODELS[STUDENT_ENDPOINT]
 GRADER_ENDPOINT = "openai"
 GRADER_LLM = GRADER_MODELS[GRADER_ENDPOINT]
 
-timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-with open(EXAM_DIR / "results.txt", "a", encoding="utf-8") as f:
-    f.write(f"Run started: {timestamp}\n")
-
 examination_results = {}
 results_table = []
+failed_questions = []
 
 for model in models:
-    accuracy, answers, metrics = examination(model, data, STUDENT_ENDPOINT)
+    accuracy, answers, metrics, model_failed_questions = examination(
+        model,
+        data,
+        STUDENT_ENDPOINT
+    )
+
+    for failed_question in model_failed_questions:
+        if failed_question not in failed_questions:
+            failed_questions.append(failed_question)
 
     examination_results[model] = {
         "accuracy": accuracy,
@@ -383,6 +413,14 @@ output_path = EXAM_DIR / "exam_results.json"
 with open(output_path, "w", encoding="utf-8") as file:
     json.dump(
         examination_results,
+        file,
+        indent=4,
+        ensure_ascii=False
+    )
+
+with open(EXAM_DIR / "failed_questions.json", "w", encoding="utf-8") as file:
+    json.dump(
+        failed_questions,
         file,
         indent=4,
         ensure_ascii=False
