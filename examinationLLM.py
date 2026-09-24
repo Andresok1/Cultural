@@ -22,7 +22,6 @@ def normalize_answer(text):
 def evaluation_result(question, llm_answer, reference_answer, question_type):
     point = 0
 
-    llm_grader = "openai"
     if llm_answer is None:
         return "No answer"
     
@@ -36,22 +35,23 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
         if normalize_answer(llm_answer) == normalize_answer(reference_answer):
             point += 1
     elif question_type == "short_answer":
-        if llm_grader == "openrouter":
-            result= openrouter_grader(question, reference_answer, llm_answer, question_type)
-        if llm_grader == "openai":
-            result= openai_grader(question, reference_answer, llm_answer, question_type)
+        if GRADER_ENDPOINT == "openrouter":
+            result= openrouter_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
+        if GRADER_ENDPOINT == "openai":
+            result= openai_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
 
         if result == "PASS":
             point += 1
     elif question_type == "long_answer":
-        if llm_grader == "openrouter":
-            result= openrouter_grader(question, reference_answer, llm_answer, question_type)
-        if llm_grader == "openai":
-            result= openai_grader(question, reference_answer, llm_answer, question_type)
+        if GRADER_ENDPOINT == "openrouter":
+            result= openrouter_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
+        if GRADER_ENDPOINT == "openai":
+            result= openai_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
+
         if result == "PASS":
             point += 1
 
-    return point, llm_grader
+    return point
 
 def examination(llm_model, examination_data, student):
     answers = {}
@@ -60,8 +60,6 @@ def examination(llm_model, examination_data, student):
 
     print("Evaluating:", llm_model)
 
-    failed_log = EXAM_DIR / "failed_questions.log"
-
     for culture, dimensions in examination_data.items():
 
         answers[culture] = {}
@@ -69,7 +67,7 @@ def examination(llm_model, examination_data, student):
 
         for dimension, question_types in dimensions.items():
 
-            print("\n" + "=" * 72)
+            print("=" * 72)
             print(f"DIMENSION: {culture} | {dimension}")
             print()
 
@@ -90,7 +88,8 @@ def examination(llm_model, examination_data, student):
                     question = question_data["question"]
                     options = question_data.get("options")
                     reference_answer = question_data["reference_answer"]
-                    
+
+                    stage = "student"
                     try: 
                         if student == "inference":
                             answer = inference_student(
@@ -132,21 +131,24 @@ def examination(llm_model, examination_data, student):
 
                             answer = answer.strip()
 
+                            stage = "grader"
+
                             print(
                                 f"{'GRADING':<9} | {question_type:<10} | "
-                                f"{MODEL_SOURCE} / {llm_model} | "
+                                f"{GRADER_ENDPOINT} / {GRADER_LLM} | "
                                 "Checking answer...",
                                 flush=True
                             )
                             
-                            point, llm_grader = evaluation_result(question, answer, reference_answer, question_format)
+                            point = evaluation_result(question, answer, reference_answer, question_format)
 
                             print(
                                 f"{'GRADING':<9} | {question_type:<10} | "
-                                f"{MODEL_SOURCE} / {llm_grader} | "
+                                f"{GRADER_ENDPOINT} / {GRADER_LLM} | "
                                 "Finished",
                                 flush=True
                             )
+                            print("\n")
 
                             correct_counter += point
 
@@ -160,28 +162,11 @@ def examination(llm_model, examination_data, student):
                             metrics[culture][dimension][question_type]["correct"] += point
 
                     except Exception as e:
-
+                        
                         print(
-                            f"{'FAILED':<9} | {question_type:<10} | "
-                            f"{MODEL_SOURCE} / {llm_model} |  {e}"
+                            f"FAILED during {stage}: "
+                            f"{type(e).__name__}: {e}"
                         )
-
-                        with open(
-                            failed_log,
-                            "a",
-                            encoding="utf-8"
-                        ) as log:
-
-                            log.write(
-                                "\n====================\n"
-                                f"MODEL: {llm_model}\n"
-                                f"CULTURE: {culture}\n"
-                                f"DIMENSION: {dimension}\n"
-                                f"TYPE: {question_type}\n"
-                                f"QUESTION: {question}\n"
-                                f"ERROR: {str(e)}\n"
-                                "====================\n"
-                            )
 
                         answer = None
 
@@ -216,7 +201,7 @@ with open(question_path, "r", encoding="utf-8") as file:
     data = json.load(file)
 
 
-MODELS = {
+STUDENT_MODELS = {
     "openai": [
         "gpt-4.1-mini",
         "gpt-4o",
@@ -238,8 +223,18 @@ MODELS = {
     ],
 }
 
-MODEL_SOURCE = "openai"
-models = MODELS[MODEL_SOURCE]
+GRADER_MODELS = {
+    "openai": "gpt-4o",
+    "interweb": "gpt-4.1-mini",
+    "openrouter": "qwen/qwen3.8-max-0902",
+    "inference": "granite-4.1:8b-bf16",
+}
+
+STUDENT_ENDPOINT = "openai"
+models = STUDENT_MODELS[STUDENT_ENDPOINT]
+
+GRADER_ENDPOINT = "openai"
+GRADER_LLM = GRADER_MODELS[GRADER_ENDPOINT]
 
 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -250,7 +245,7 @@ examination_results = {}
 results_table = []
 
 for model in models:
-    accuracy, answers, metrics = examination(model, data, MODEL_SOURCE)
+    accuracy, answers, metrics = examination(model, data, STUDENT_ENDPOINT)
 
     examination_results[model] = {
         "accuracy": accuracy,
