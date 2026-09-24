@@ -11,12 +11,29 @@ from pathlib import Path
 import pandas as pd
 import json
 import argparse
+import atexit
 import random
 import glob
 import os
+import sys
 
 
 BASE_DIR = Path(__file__).resolve().parent
+
+
+class TerminalCapture:
+    def __init__(self, terminal, document):
+        self.terminal = terminal
+        self.document = document
+
+    def write(self, text):
+        self.terminal.write(text)
+        self.document.write(text)
+        self.document.flush()
+
+    def flush(self):
+        self.terminal.flush()
+        self.document.flush()
 
 def positive_integer(value):
     number = int(value)
@@ -170,4 +187,5 @@ if empty_knowledge_path.exists():
 for culture, counts in experiment_counts.items():
     print_experiment_summary(counts, summary_path, culture=culture)
 print(f"Summary saved to: {summary_path}")
+print(f"Terminal output saved to: {terminal_output_path}")
 
