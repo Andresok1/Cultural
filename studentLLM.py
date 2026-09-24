@@ -342,7 +342,7 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
     )
 
 
-def openrouter_grader(question, reference_answer, llm_answer, question_type, retries = 5):
+def openrouter_grader(question, reference_answer, llm_answer, question_type, retries = 3):
 
     llm_model= "qwen/qwen3.8-max-0902"
 
@@ -633,9 +633,9 @@ def openai_student(llm_model, question, options, question_format, culture, dimen
     return None
 
 
-def openai_grader(llm_model, question, options, question_format, retries = 2, status_label=None):
+def openai_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM, retries = 3):
 
-    openai_model = "gpt-4.1-mini"  
+    openai_model = GRADER_LLM  
 
 
     load_dotenv()
@@ -647,7 +647,7 @@ def openai_grader(llm_model, question, options, question_format, retries = 2, st
         timeout=300,
     )
 
-    user_prompt = PROMPT_STUDENT(question, options, question_format)
+    user_prompt = PROMPT_GRADER(question, reference_answer, llm_answer, question_type)
 
     for attempt in range(retries + 1):
 
