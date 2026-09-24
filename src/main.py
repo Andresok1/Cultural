@@ -7,16 +7,11 @@ from duckDuckGo import fetch_raw_results
 from knowledgeGen import knowledge_level_manager, translate
 from pathlib import Path
 
-
 import pandas as pd
 import json
 import argparse
 import atexit
-import random
-import glob
-import os
 import sys
-
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -34,6 +29,32 @@ class TerminalCapture:
     def flush(self):
         self.terminal.flush()
         self.document.flush()
+
+def setup_experiment_output():
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+
+    summary_path = RESULTS_DIR / f"experiment_summary_{timestamp}.txt"
+    terminal_output_path = RESULTS_DIR / f"terminal_output_{timestamp}.txt"
+
+    summary_path.write_text("", encoding="utf-8")
+
+    terminal_output_document = terminal_output_path.open(
+        "w",
+        encoding="utf-8"
+    )
+
+    terminal_capture = TerminalCapture(
+        sys.stdout,
+        terminal_output_document
+    )
+
+    sys.stdout = terminal_capture
+    sys.stderr = terminal_capture
+
+    atexit.register(terminal_output_document.close)
+
+    return summary_path, terminal_output_path
+
 
 def positive_integer(value):
     number = int(value)
@@ -128,12 +149,14 @@ culture_language = {
 all_results = {}
 culture_dfs = {}
 experiment_counts = {culture: {"complete": 0, "incomplete": 0} for culture in cultures}
-summary_path = RESULTS_DIR / f"experiment_summary_{datetime.now():%Y%m%d_%H%M%S_%f}.txt"
-summary_path.write_text("", encoding="utf-8")
+
+summary_path, terminal_output_path = setup_experiment_output()
+
+print(f"# dimensions to compute: {len(dimensions)} (starting at {dimension_start}/{len(all_dimensions)})")
 
 for culture in cultures:
-    for dimension in dimensions:
-        print(dimension)
+    for dimension_number, dimension in enumerate(dimensions, start=dimension_start):
+        print(f"Processing dimension {dimension_number}/{len(all_dimensions)}: {dimension}")
         key = f"{culture}_{dimension}"
 
         base_query = f"{dimension} in {culture} culture"
