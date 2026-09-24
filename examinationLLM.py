@@ -2,7 +2,7 @@ from result_paths import EXAM_DIR, QUESTIONS_DIR
 from pathlib import Path
 import json
 from graphics import df_model_culture_dimension, plot_model_culture_accuracy, plot_model_culture_qtype_accuracy, plot_model_questiontype_accuracy, plot_model_culture_dimension
-from studentLLM import interweb_student, openrouter_grader, openrouter_student
+from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student
 from datetime import datetime
 import pandas as pd
 
@@ -61,6 +61,10 @@ def examination(llm_model, examination_data):
 
         for dimension, question_types in dimensions.items():
 
+            print("\n" + "=" * 72)
+            print(f"DIMENSION: {culture} | {dimension}")
+            print()
+
             answers[culture][dimension] = {}
             metrics[culture][dimension] = {}
 
@@ -80,12 +84,30 @@ def examination(llm_model, examination_data):
                     reference_answer = question_data["reference_answer"]
                     
                     try: 
-                        answer = openrouter_student(
+                        answer = inference_student(
                             llm_model, 
                             question, 
                             options,
-                            question_format
+                            question_format, 
+                            culture,
+                            dimension,
+                            status_label=question_type
                         )
+
+                        # answer = openai_student(
+                        #     llm_model, 
+                        #     question, 
+                        #     options,
+                        #     question_format, 
+                        #     culture,
+                        #     dimension
+                        # )
+                        # answer = openrouter_student(
+                        #     llm_model, 
+                        #     question, 
+                        #     options,
+                        #     question_format, 
+                        # )
                         # answer = interweb_student(
                         #     llm_model, 
                         #     question, 
@@ -98,8 +120,22 @@ def examination(llm_model, examination_data):
                         if answer is not None: 
 
                             answer = answer.strip()
+
+                            print(
+                                f"{'GRADING':<9} | {question_type:<10} | "
+                                f"Openrouter / {llm_model} | "
+                                "Checking answer...",
+                                flush=True
+                            )
                             
                             point = evaluation_result(question, answer, reference_answer, question_format)
+
+                            print(
+                                f"{'GRADING':<9} | {question_type:<10} | "
+                                f"Openrouter / {llm_model} | "
+                                "Finished",
+                                flush=True
+                            )
 
                             correct_counter += point
 
@@ -115,9 +151,9 @@ def examination(llm_model, examination_data):
                     except Exception as e:
 
                         print(
-                            f"FAILED: {llm_model} | {question[:50]}..."
+                            f"{'FAILED':<9} | {question_type:<10} | "
+                            f"Openrouter / {llm_model} |  {e}"
                         )
-                        print(e)
 
                         with open(
                             failed_log,
@@ -185,13 +221,20 @@ with open(question_path, "r", encoding="utf-8") as file:
 #     # "qwen3.5:9b",
 
 #     ]
-models = [
-    "openai/gpt-5.6-luna", 
-    "qwen/qwen3.7-flash", 
-    # "llama4:16x17b", 
-    # "qwen3.5:9b",
 
-    ]
+# models = [
+#     "openai/gpt-5.6-luna", 
+#     "qwen/qwen3.7-flash", 
+#     # "llama4:16x17b", 
+#     # "qwen3.5:9b",
+# ]
+
+# inference
+models = [
+    "granite-4.1:8b-bf16",
+    "gemma3:4b-f16",
+    # "qwen3.5:9b-bf16",
+]
 
 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
