@@ -3,6 +3,9 @@ import os
 from googleapiclient import model
 import requests
 import random
+from openai import APIConnectionError, APITimeoutError, InternalServerError, OpenAI, RateLimitError
+from time import perf_counter
+
 
 from dotenv import load_dotenv
 
@@ -387,3 +390,168 @@ def openrouter_grader(question, reference_answer, llm_answer, question_type, ret
 
 
     return answer
+
+
+def inference_student(
+    llm_model,
+    question,
+    options,
+    question_format,
+    culture,
+    dimension,
+    retries=2,
+    status_label=None
+):
+
+    inference_model = llm_model
+    status_label = status_label or question_format
+
+    load_dotenv()
+    INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
+
+    url = "https://inference.kbs.uni-hannover.de"
+
+    user_prompt = PROMPT_STUDENT(question, options, question_format)
+
+    client = OpenAI(
+        base_url=f"{url}/v1",
+        api_key=os.getenv("INFERENCE_API_KEY"),
+        timeout=300,
+    )
+
+
+    for attempt in range(retries + 1):
+
+        try:
+
+            print(
+                f"{'ANSWERING':<9} | {status_label:<10} | "
+                f"inference / {inference_model} | "
+                f"Sending request "
+                f"(attempt {attempt + 1}/{retries + 1})...",
+                flush=True
+            )
+
+            started = perf_counter()
+
+            response = client.chat.completions.create(
+                model=inference_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": ROLE_STUDENT
+                    },
+                    {
+                        "role": "user",
+                        "content": f"{user_prompt}\n"
+                    }
+                ]
+            )
+
+            answer = response.choices[0].message.content
+
+            print(
+                f"{'ANSWERING':<9} | {status_label:<10} | "
+                f"inference / {inference_model} | "
+                f"Finished after "
+                f"{perf_counter() - started:.1f}s"
+            )
+
+            if (
+                answer is None
+                or "[]" in answer
+                or answer.strip() == ""
+            ):
+
+                print("Empty response from inference.")
+
+                if attempt < retries:
+                    wait_time = min(2 ** attempt, 60)
+
+                    print(f"Retrying in {wait_time}s...")
+                        
+
+                    time.sleep(wait_time)
+                    continue
+
+                print(
+                    f"Game Over: empty response for "
+                    f"{culture} | {dimension}"
+                )
+
+                return None
+
+            return answer
+
+        except (
+            InternalServerError,
+            APIConnectionError,
+            APITimeoutError,
+            RateLimitError
+        ) as e:
+
+            print(
+                f"API error on attempt "
+                f"{attempt + 1}/{retries + 1}:"
+            )
+
+            print(
+                f"Timeout after {perf_counter()-started:.1f}s"
+            )
+
+            print(f"{type(e).__name__}: {e}")
+
+            if attempt >= retries:
+
+                print(f"Game Over: {culture} | {dimension}")
+
+                return None
+
+            wait_time = min(15 * (2 ** attempt), 60)
+
+            print(f"Retrying in {wait_time}s...")                
+
+            time.sleep(wait_time)
+
+        except Exception as e:
+
+            print(
+                f"Unexpected error: "
+                f"{type(e).__name__}: {e}"
+            )
+
+            return None
+
+    return None
+
+
+def openai_student(llm_model, question, options, question_format, culture, dimension, retries = 2):
+
+    openai_model = "gpt-4o-mini"  # Use the model specified in the command-line arguments
+
+    user_prompt = PROMPT_STUDENT(question, options, question_format)
+
+    load_dotenv()
+
+    client = OpenAI(
+        api_key= os.getenv("OPENAI_API_KEY"),
+        base_url="https://api.openai.com/v1"
+    )
+
+    print(f"{question_format} openai / {openai_model} | Sending request...", flush=True)
+    started = perf_counter()
+
+    response = client.chat.completions.create(
+        model= openai_model, #OPENAI constant Model
+        messages=[
+            {
+                "role": "user", 
+                "content": ROLE_STUDENT + user_prompt
+            }
+        ]
+    )
+
+    content = response.choices[0].message.content
+    print(f"{culture} | {dimension} openai / {openai_model} | Finished after {perf_counter() - started:.1f}s")
+    return content
+
