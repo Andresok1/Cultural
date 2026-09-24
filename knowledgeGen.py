@@ -127,7 +127,10 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
                     else:
                         knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
 
-                    valid_entries, valid_response = extraction_entries(knowledge_text, json_cleanig)
+                    valid_entries, valid_response, response_status = extraction_entries(
+                        knowledge_text,
+                        json_cleanig,
+                    )
 
                     language_entries.extend(valid_entries)
                     
@@ -135,10 +138,16 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
 
                     if valid_response:
                         stats[lang]["processed"] += len(knowledge_input_cache)
-                        print(f"{batch_label} | Knowledge entries: {len(valid_entries)}")
+                        print(
+                            f"{batch_label} | Status: {response_status} | "
+                            f"Knowledge entries: {len(valid_entries)}"
+                        )
                     else:
                         stats[lang]["invalid"] += 1
-                        print(f"{batch_label} | Invalid response; documents not counted as processed")
+                        print(
+                            f"{batch_label} | Invalid response: {response_status}; "
+                            "documents not counted as processed"
+                        )
 
                 knowledge_text_cleaned = json.dumps(language_entries, ensure_ascii=False)
                 knowledge_output.append(knowledge_text_cleaned)
