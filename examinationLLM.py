@@ -2,7 +2,7 @@ from result_paths import EXAM_DIR, QUESTIONS_DIR
 from pathlib import Path
 import json
 from graphics import df_model_culture_dimension, plot_model_culture_accuracy, plot_model_culture_qtype_accuracy, plot_model_questiontype_accuracy, plot_model_culture_dimension
-from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student
+from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student, openai_grader
 from datetime import datetime
 import pandas as pd
 
@@ -22,6 +22,7 @@ def normalize_answer(text):
 def evaluation_result(question, llm_answer, reference_answer, question_type):
     point = 0
 
+    llm_grader = "openai"
     if llm_answer is None:
         return "No answer"
     
@@ -35,17 +36,24 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
         if normalize_answer(llm_answer) == normalize_answer(reference_answer):
             point += 1
     elif question_type == "short_answer":
-        result= openrouter_grader(question, reference_answer, llm_answer, question_type)
+        if llm_grader == "openrouter":
+            result= openrouter_grader(question, reference_answer, llm_answer, question_type)
+        if llm_grader == "openai":
+            result= openai_grader(question, reference_answer, llm_answer, question_type)
+
         if result == "PASS":
             point += 1
     elif question_type == "long_answer":
-        result= openrouter_grader(question, reference_answer, llm_answer, question_type)
+        if llm_grader == "openrouter":
+            result= openrouter_grader(question, reference_answer, llm_answer, question_type)
+        if llm_grader == "openai":
+            result= openai_grader(question, reference_answer, llm_answer, question_type)
         if result == "PASS":
             point += 1
 
-    return point
+    return point, llm_grader
 
-def examination(llm_model, examination_data):
+def examination(llm_model, examination_data, student):
     answers = {}
     metrics = {}
     correct_counter = 0
@@ -84,36 +92,39 @@ def examination(llm_model, examination_data):
                     reference_answer = question_data["reference_answer"]
                     
                     try: 
-                        answer = inference_student(
-                            llm_model, 
-                            question, 
-                            options,
-                            question_format, 
-                            culture,
-                            dimension,
-                            status_label=question_type
-                        )
-
-                        # answer = openai_student(
-                        #     llm_model, 
-                        #     question, 
-                        #     options,
-                        #     question_format, 
-                        #     culture,
-                        #     dimension
-                        # )
-                        # answer = openrouter_student(
-                        #     llm_model, 
-                        #     question, 
-                        #     options,
-                        #     question_format, 
-                        # )
-                        # answer = interweb_student(
-                        #     llm_model, 
-                        #     question, 
-                        #     options,
-                        #     question_format
-                        # )
+                        if student == "inference":
+                            answer = inference_student(
+                                llm_model, 
+                                question, 
+                                options,
+                                question_format, 
+                                culture,
+                                dimension,
+                                status_label=question_type
+                            )
+                        elif student == "openai":
+                            answer = openai_student(
+                                llm_model, 
+                                question, 
+                                options,
+                                question_format, 
+                                culture,
+                                dimension
+                            )
+                        elif student == "openrouter":
+                            answer = openrouter_student(
+                                llm_model, 
+                                question, 
+                                options,
+                                question_format, 
+                            )
+                        elif student == "openai":
+                            answer = interweb_student(
+                                llm_model, 
+                                question, 
+                                options,
+                                question_format
+                            )
 
                         metrics[culture][dimension][question_type]["total"] += 1    #A None answer is still being a response, so it has to be counted in the total.
 
@@ -123,16 +134,16 @@ def examination(llm_model, examination_data):
 
                             print(
                                 f"{'GRADING':<9} | {question_type:<10} | "
-                                f"Openrouter / {llm_model} | "
+                                f"{MODEL_SOURCE} / {llm_model} | "
                                 "Checking answer...",
                                 flush=True
                             )
                             
-                            point = evaluation_result(question, answer, reference_answer, question_format)
+                            point, llm_grader = evaluation_result(question, answer, reference_answer, question_format)
 
                             print(
                                 f"{'GRADING':<9} | {question_type:<10} | "
-                                f"Openrouter / {llm_model} | "
+                                f"{MODEL_SOURCE} / {llm_grader} | "
                                 "Finished",
                                 flush=True
                             )
@@ -152,7 +163,7 @@ def examination(llm_model, examination_data):
 
                         print(
                             f"{'FAILED':<9} | {question_type:<10} | "
-                            f"Openrouter / {llm_model} |  {e}"
+                            f"{MODEL_SOURCE} / {llm_model} |  {e}"
                         )
 
                         with open(
@@ -204,37 +215,31 @@ question_path = QUESTIONS_DIR / "questions.json"
 with open(question_path, "r", encoding="utf-8") as file:
     data = json.load(file)
 
-# models = [
-#     "inclusionai/ling-3.0-flash-sante:free",
-#     # "minimax/minimax-m3:free",
-#     "qwen/qwen3.8-max-0902",
-#     # "google/gemma-4-26b-a4b-it:free",
-#     # "inclusionai/ling-3.0-flash-fin:free",
 
-# ]
+MODELS = {
+    "openai": [
+        "gpt-4.1-mini",
+        "gpt-4o",
+    ],
 
-#interweb
-# models = [
-#     "gpt-4.1-mini", 
-#     "gpt-4o", 
-#     # "llama4:16x17b", 
-#     # "qwen3.5:9b",
+    "interweb": [
+        "gpt-4.1-mini",
+        "gpt-4o",
+    ],
 
-#     ]
+    "interweb": [
+        "openai/gpt-5.6-luna",
+        "qwen/qwen3.7-flash",
+    ],
 
-# models = [
-#     "openai/gpt-5.6-luna", 
-#     "qwen/qwen3.7-flash", 
-#     # "llama4:16x17b", 
-#     # "qwen3.5:9b",
-# ]
+    "inference": [
+        "granite-4.1:8b-bf16",
+        "gemma3:4b-f16",
+    ],
+}
 
-# inference
-models = [
-    "granite-4.1:8b-bf16",
-    "gemma3:4b-f16",
-    # "qwen3.5:9b-bf16",
-]
+MODEL_SOURCE = "openai"
+models = MODELS[MODEL_SOURCE]
 
 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -245,7 +250,7 @@ examination_results = {}
 results_table = []
 
 for model in models:
-    accuracy, answers, metrics = examination(model, data)
+    accuracy, answers, metrics = examination(model, data, MODEL_SOURCE)
 
     examination_results[model] = {
         "accuracy": accuracy,
