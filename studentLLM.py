@@ -202,8 +202,6 @@ def interweb_student(llm_model, question, options, question_format, retries = 5)
     load_dotenv()
     INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
 
-    url = "https://interweb.l3s.uni-hannover.de"
-
     headers = {
         "Authorization": f"Bearer {INTERWEB_API_KEY}",
         "accept": "application/json",
@@ -229,7 +227,7 @@ def interweb_student(llm_model, question, options, question_format, retries = 5)
     try:
             
         response = requests.post(
-            f"{url}/v1/chat/completions",
+            f"https://interweb.l3s.uni-hannover.de/v1/chat/completions",
             headers=headers,
             json=payload,
             timeout=60
@@ -288,8 +286,6 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
     load_dotenv()
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-    url = "https://openrouter.ai"
-
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {OPENROUTER_API_KEY}"
@@ -314,7 +310,7 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
     for attempt in range(retries):
  
         response = requests.post(
-            f"{url}/api/v1/chat/completions",
+            f"https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
             json=data,
             timeout=60
@@ -347,14 +343,11 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
 
 
 def openrouter_grader(question, reference_answer, llm_answer, question_type, retries = 5):
-    """
-    LLM takes the rol from a student and it answers the question given to it using Openrouter.
-    """
+
+    llm_model= "qwen/qwen3.8-max-0902"
 
     load_dotenv()
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-
-    url = "https://openrouter.ai"
 
     headers = {
         "Content-Type": "application/json",
@@ -364,7 +357,7 @@ def openrouter_grader(question, reference_answer, llm_answer, question_type, ret
     user_prompt = PROMPT_GRADER(question, reference_answer, llm_answer, question_type)
 
     data = {
-        "model": "qwen/qwen3.8-max-0902",
+        "model": llm_model,
         "messages": [
             {
                 "role": "system",
@@ -378,7 +371,7 @@ def openrouter_grader(question, reference_answer, llm_answer, question_type, ret
     }
 
     response = requests.post(
-        f"{url}/api/v1/chat/completions",
+        f"https://openrouter.ai/api/v1/chat/completions",
         headers=headers,
         json=data,
         timeout=60
@@ -409,12 +402,10 @@ def inference_student(
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
 
-    url = "https://inference.kbs.uni-hannover.de"
-
     user_prompt = PROMPT_STUDENT(question, options, question_format)
 
     client = OpenAI(
-        base_url=f"{url}/v1",
+        base_url=f"https://inference.kbs.uni-hannover.de/v1",
         api_key=os.getenv("INFERENCE_API_KEY"),
         timeout=300,
     )
@@ -525,9 +516,10 @@ def inference_student(
     return None
 
 
-def openai_student(llm_model, question, options, question_format, culture, dimension, retries = 2):
+def openai_student(llm_model, question, options, question_format, culture, dimension, retries = 2, status_label=None):
 
-    openai_model = "gpt-4o-mini"  # Use the model specified in the command-line arguments
+    openai_model = llm_model  # Use the model specified in the command-line arguments
+    status_label = status_label or question_format
 
     user_prompt = PROMPT_STUDENT(question, options, question_format)
 
@@ -535,23 +527,209 @@ def openai_student(llm_model, question, options, question_format, culture, dimen
 
     client = OpenAI(
         api_key= os.getenv("OPENAI_API_KEY"),
-        base_url="https://api.openai.com/v1"
+        base_url="https://api.openai.com/v1",
+        timeout=300,
     )
 
-    print(f"{question_format} openai / {openai_model} | Sending request...", flush=True)
-    started = perf_counter()
+    for attempt in range(retries + 1):
 
-    response = client.chat.completions.create(
-        model= openai_model, #OPENAI constant Model
-        messages=[
-            {
-                "role": "user", 
-                "content": ROLE_STUDENT + user_prompt
-            }
-        ]
+        try:
+
+            print(
+                f"{'ANSWERING':<9} | {status_label:<10} | "
+                f"openai / {openai_model} | "
+                f"Sending request "
+                f"(attempt {attempt + 1}/{retries + 1})...",
+                flush=True
+            )
+
+            started = perf_counter()
+
+            response = client.chat.completions.create(
+                model= openai_model,
+                messages=[
+                    {
+                        "role": "user", 
+                        "content": ROLE_STUDENT + user_prompt
+                    }
+                ]
+            )
+
+            answer = response.choices[0].message.content
+
+
+            print(
+                f"{'ANSWERING':<9} | {status_label:<10} | "
+                f"openai / {openai_model} | "
+                f"Finished after "
+                f"{perf_counter() - started:.1f}s"
+            )
+
+            if (
+                answer is None
+                or "[]" in answer
+                or answer.strip() == ""
+            ):
+
+                print("Empty response from inference.")
+
+                if attempt < retries:
+                    wait_time = min(2 ** attempt, 60)
+
+                    print(f"Retrying in {wait_time}s...")
+                        
+
+                    time.sleep(wait_time)
+                    continue
+
+                print(
+                    f"Game Over: empty response for "
+                    f"{culture} | {dimension}"
+                )
+
+                return None
+
+            return answer
+
+        except (
+            InternalServerError,
+            APIConnectionError,
+            APITimeoutError,
+            RateLimitError
+        ) as e:
+
+            print(
+                f"API error on attempt "
+                f"{attempt + 1}/{retries + 1}:"
+            )
+
+            print(
+                f"Timeout after {perf_counter()-started:.1f}s"
+            )
+
+            print(f"{type(e).__name__}: {e}")
+
+            if attempt >= retries:
+
+                print(f"Game Over: {culture} | {dimension}")
+
+                return None
+
+            wait_time = min(15 * (2 ** attempt), 60)
+
+            print(f"Retrying in {wait_time}s...")                
+
+            time.sleep(wait_time)
+
+        except Exception as e:
+
+            print(
+                f"Unexpected error: "
+                f"{type(e).__name__}: {e}"
+            )
+
+            return None
+
+    return None
+
+
+def openai_grader(llm_model, question, options, question_format, retries = 2, status_label=None):
+
+    openai_model = "gpt-4.1-mini"  
+
+
+    load_dotenv()
+    OPENAI_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+    client = OpenAI(
+        api_key= os.getenv(OPENAI_API_KEY),
+        base_url="https://api.openai.com/v1",
+        timeout=300,
     )
 
-    content = response.choices[0].message.content
-    print(f"{culture} | {dimension} openai / {openai_model} | Finished after {perf_counter() - started:.1f}s")
-    return content
+    user_prompt = PROMPT_STUDENT(question, options, question_format)
 
+    for attempt in range(retries + 1):
+
+        try:
+
+            started = perf_counter()
+
+            response = client.chat.completions.create(
+                model= openai_model,
+                messages=[
+                    {
+                        "role": "user", 
+                        "content": ROLE_STUDENT + user_prompt
+                    }
+                ]
+            )
+
+            answer = response.choices[0].message.content
+
+
+            if (
+                answer is None
+                or "[]" in answer
+                or answer.strip() == ""
+            ):
+
+                print("Empty response from openai.")
+
+                if attempt < retries:
+                    wait_time = min(2 ** attempt, 60)
+
+                    print(f"Retrying in {wait_time}s...")
+                        
+
+                    time.sleep(wait_time)
+                    continue
+
+                print(
+                    f"Game Over!"
+                )
+
+                return None
+
+            return answer
+
+        except (
+            InternalServerError,
+            APIConnectionError,
+            APITimeoutError,
+            RateLimitError
+        ) as e:
+
+            print(
+                f"API error on attempt "
+                f"{attempt + 1}/{retries + 1}:"
+            )
+
+            print(
+                f"Timeout after {perf_counter()-started:.1f}s"
+            )
+
+            print(f"{type(e).__name__}: {e}")
+
+            if attempt >= retries:
+
+                print(f"Game Over!!")
+
+                return None
+
+            wait_time = min(15 * (2 ** attempt), 60)
+
+            print(f"Retrying in {wait_time}s...")                
+
+            time.sleep(wait_time)
+
+        except Exception as e:
+
+            print(
+                f"Unexpected error: "
+                f"{type(e).__name__}: {e}"
+            )
+
+            return None
+
+    return None
