@@ -1,28 +1,27 @@
 import json 
 
 def extraction_entries(text, clean):
-    """Return accepted entries and whether extraction succeeded.
+    """Return accepted entries, processability, and a response status.
 
-    An empty list or an explicit no-relevant-information result is successful.
-    Missing responses, invalid JSON and malformed entries are failures.
+    A response with at least one valid entry is processable, even if another entry is malformed. An empty list or an explicit no-relevant-information result is also successful.
     """
     try:
         entries = json.loads(clean(text or ""))
     except (ValueError, TypeError):
-        return [], False
+        return [], False, "invalid_json"
     
     if isinstance(entries, dict):
         entries = [entries]
 
     if not isinstance(entries, list):
-        return [], False
+        return [], False, "response_is_not_a_list"
     
     valid_entries = []
-    valid_response = True
+    invalid_entries = 0
 
     for entry in entries:
         if not isinstance(entry, dict):
-            valid_response = False
+            invalid_entries += 1
             continue
 
         title = str(entry.get("title", ""))
@@ -42,9 +41,13 @@ def extraction_entries(text, clean):
         if fields_are_valid:
             valid_entries.append(entry)
         else:
-            valid_response = False
+            invalid_entries += 1
 
-    return valid_entries, valid_response
+    if invalid_entries and valid_entries:
+        return valid_entries, True, "partial"
+    if invalid_entries:
+        return [], False, "no_valid_entries"
+    return valid_entries, True, "valid"
 
 
 def print_dimension_summary(culture, dimension, stats, questions, valid_process):
