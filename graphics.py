@@ -1,5 +1,6 @@
 from result_paths import EXAM_DIR
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
 def plot_model_culture_accuracy(df_final):
@@ -124,13 +125,31 @@ def plot_model_culture_qtype_accuracy(df_final):
 
 
 def df_model_culture_dimension(df_detail):
+    culture_scope = pd.read_csv(
+        EXAM_DIR.parent.parent / "cultural_parameters" / "cultureScope.csv"
+    )
+
+    dimension_categories = (
+        culture_scope[
+            ["Fine-grained Dimension", "Category"]
+        ]
+        .drop_duplicates()
+        .rename(
+            columns={
+                "Fine-grained Dimension": "dimension",
+                "Category": "category"
+            }
+        )
+    )
+
     df_dimension = (
         df_detail
+        .merge(dimension_categories, on="dimension", how="left")
         .groupby(
             [
                 "model",
                 "culture",
-                "dimension"
+                "category"
             ]
         )
         .agg(
@@ -155,7 +174,7 @@ def plot_model_culture_dimension(df_dimension):
 
     sns.barplot(
         data=df_dimension,
-        x="dimension",
+        x="category",
         y="accuracy",
         hue="model", 
         errorbar=None
@@ -163,12 +182,10 @@ def plot_model_culture_dimension(df_dimension):
 
 
     plt.ylabel("Accuracy")
-    plt.xlabel("Cultural dimension")
+    plt.xlabel("Category")
 
 
-    plt.title(
-        "Performance across cultural dimensions"
-    )
+    plt.title("Performance across cultural categories")
 
 
     plt.ylim(0,1)
@@ -179,7 +196,7 @@ def plot_model_culture_dimension(df_dimension):
 
 
     plt.savefig(
-        EXAM_DIR / "model_dimension.png",
+        EXAM_DIR / "model_category.png",
         dpi=300
     )
 

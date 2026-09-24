@@ -470,3 +470,5 @@ plot_model_culture_qtype_accuracy(df)
 df_dimension = df_model_culture_dimension(df_detail)
 
 plot_model_culture_dimension(df_dimension)
+
+print_examination_summary(df_detail)
