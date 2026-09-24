@@ -13,6 +13,8 @@ pip install -r requirements.txt
 ```
 python -m src.main --knowledge_level collective --question_language english --api openrouter --question_type all
 ```
+
+The terminal output is shown live and saved with a timestamp in `results/terminal_output_<timestamp>.txt`.
 ## Test running examination:
 
 python -m examinationLLM  
