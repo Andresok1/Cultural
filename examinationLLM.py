@@ -174,7 +174,9 @@ def examination(llm_model, examination_data, student):
     failed_questions = []
     correct_counter = 0
 
-    print("Evaluating:", llm_model)
+    print("\n" + "*" * 72)
+    print(f"*** Evaluating student model: {llm_model} ***")
+    print("*" * 72 + "\n")
 
     for culture, dimensions in examination_data.items():
 
