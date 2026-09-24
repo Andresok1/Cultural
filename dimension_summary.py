@@ -103,7 +103,11 @@ def coverage_threshold(stats, show=False):
     coverage_lang = {}
 
     for lang, item in stats.items():
-        coverage = item['processed']/item['valid']
+        
+        if item['valid'] == 0:
+            coverage=0
+        else:
+            coverage = item['processed']/item['valid']
 
         if coverage >= 0.75:
             valid = True
