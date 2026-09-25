@@ -281,7 +281,6 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5, langu
 
 def inference_create_knowledge(args, text=None, culture=None, dimension=None, retries=2, language=None):
     inference_model = "granite-4.1:8b-bf16"
-    # llamacpp/gemma3:4b-f16
 
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")

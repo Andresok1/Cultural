@@ -18,7 +18,50 @@ QUESTION_TYPES = {
     "multihop": "Based on the context, think through all relevant cultural points step by step and generate a multi-hop reasoning question to assess whether the learner can synthesize multiple cultural elements and understand the deeper logic or internal connections among cultural phenomena. The question should prompt learners to start from multiple information points, integrate cultural knowledge, and perform logical analysis, comparison, or generalization. Scenario-based, integrated analysis, or comparative reasoning questions are recommended."
 }
 
-ROLE_QUESTION = "You are an expert educational assessment designer specialized in cultural knowledge evaluation. Your task is to create accurate multiple-choice questions from provided cultural information. You design assessment items that evaluate understanding, reasoning, and interpretation of cultural traits. You must ensure questions are clear, unbiased, and supported by the provided context."
+ROLE_QUESTION = """
+You are an expert educational assessment designer specialized in cultural knowledge evaluation.
+Your task is to create accurate assessment questions from provided cultural information.
+You design items that evaluate understanding, reasoning, and interpretation.
+Questions may include multiple-choice, true/false, short-answer, or long-answer formats.
+"""
+
+def group_raw_questions(history):
+    """Migrate older raw files to culture -> dimension -> type -> responses."""
+    if isinstance(history, dict):
+        for dimensions in history.values():
+            for dimension, responses in dimensions.items():
+                if isinstance(responses, list):
+                    dimensions[dimension] = {"Unknown": responses}
+        return history
+    if not isinstance(history, list):
+        history = [{"response": history}]
+    grouped = {}
+    for entry in history:
+        if not isinstance(entry, dict):
+            entry = {"response": entry}
+        culture = entry.get("culture") or "Unknown"
+        dimension = entry.get("dimension") or "Unknown"
+        question_type = entry.get("question_type") or "Unknown"
+        grouped.setdefault(culture, {}).setdefault(dimension, {}).setdefault(question_type, []).append(entry["response"])
+    return grouped
+
+
+def save_raw_question(response, *, culture, question_type, dimension=None):
+    """Keep every original response, including empty answers and retry attempts."""
+    output_path = QUESTIONS_DIR / "questions_raw.json"
+    if output_path.exists():
+        with open(output_path, encoding="utf-8") as f:
+            history = json.load(f)
+        history = group_raw_questions(history)
+    else:
+        history = {}
+
+    history.setdefault(culture, {}).setdefault(dimension or "Unknown", {}).setdefault(question_type, []).append(response)
+    temporary_path = output_path.with_suffix(".json.tmp")
+    with open(temporary_path, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+    temporary_path.replace(output_path)
+
 
 def random_llm(selected_format):
 
@@ -199,6 +242,7 @@ def openai_create_question(text, question_type, culture, question_language):
     )
 
     content = response.choices[0].message.content
+    save_raw_question(content, culture=culture, dimension=dimension, question_type=question_type)
     return content, selected_format
 
 def interweb_create_question(args, text, question_type, culture, question_language, retries=5):
@@ -284,6 +328,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
             return None
         
         answer = response.json()["choices"][0]["message"]["content"]
+        save_raw_question(answer, culture=culture, dimension=dimension, question_type=question_type)
 
         if answer is None or "[]" in answer or answer.strip() == "":
             if retries > 0:
@@ -382,6 +427,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
     response.raise_for_status()
 
     answer = response.json()["choices"][0]["message"]["content"]
+    save_raw_question(answer, culture=culture, dimension=dimension, question_type=question_type)
 
     return answer, selected_format
 
@@ -435,6 +481,7 @@ def inference_create_question(args, text, question_type, culture, dimension, que
     started = perf_counter()
 
     answer = response.choices[0].message.content
+    save_raw_question(answer, culture=culture, dimension=dimension, question_type=question_type)
     
     print(f"{language + ' | ' if language else ''}inference / {inference_model} | Finished after {perf_counter() - started:.1f}s")
 
@@ -530,10 +577,6 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
         question_reference = None
     else: 
         question_reference, selected_format = result
-
-        output_path_raw = QUESTIONS_DIR / "questions_raw.json"
-        with open(output_path_raw, "w", encoding="utf-8") as f:     #Save question (RAW question)
-            json.dump(question_reference, f, ensure_ascii=False, indent=2)
 
     #for each question type there is a differnet format to follow
     if question_reference is not None:
