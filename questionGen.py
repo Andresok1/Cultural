@@ -110,16 +110,16 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
         """,
 
         "short_answer": """
-        Question: Write a short essay answering the following question. Expected answer length: 3-5 sentences. [question]
+        Question:    [question]
         Options: "NA"
         Reference Answer: [answer]
 
         """,
 
         "long_answer": """
-        Question: Write an essay answering the following question and also explain the reasoning step by step. Expected answer length: 5-8 sentences. [question]
+        Question: [question]
         Options: "NA"
-        Reference Answer:[answer]
+        Reference Answer: [answer]
 
         """
     }
@@ -193,7 +193,7 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
     
     return prompt, selected_format
 
-def openai_create_question(text, question_type, culture, question_language):
+def openai_create_question(text, question_type, culture, question_language, dimension=None):
     """
     As input it receives a text and extracts important features and content related to a specific culture to generate a question.
     
@@ -238,6 +238,7 @@ def openai_create_question(text, question_type, culture, question_language):
 
     response = client.chat.completions.create(
         model= openai_model, 
+        response_format={"type":"json_object"},
         messages=[{"role": "user", "content": ROLE_QUESTION + prompt}]
     )
 
@@ -245,7 +246,7 @@ def openai_create_question(text, question_type, culture, question_language):
     save_raw_question(content, culture=culture, dimension=dimension, question_type=question_type)
     return content, selected_format
 
-def interweb_create_question(args, text, question_type, culture, question_language, retries=5):
+def interweb_create_question(args, text, question_type, culture, question_language, retries=5, dimension=None):
     """ 
 
     """
@@ -306,6 +307,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
             
         response = requests.post(
             f"{url}/v1/chat/completions",
+            response_format={"type":"json_object"},
             headers=headers,
             json=payload,
             timeout=60
@@ -322,7 +324,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
                     question_type, 
                     culture, 
                     question_language, 
-                    retries - 1
+                    retries - 1, dimension=dimension
                 )   
 
             return None
@@ -339,7 +341,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
                     question_type, 
                     culture, 
                     question_language, 
-                    retries - 1
+                    retries - 1, dimension=dimension
                 )
 
             return None
@@ -356,7 +358,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
                 question_type, 
                 culture, 
                 question_language, 
-                retries - 1
+                retries - 1, dimension=dimension
             )
 
         return None
@@ -419,6 +421,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
 
     response = requests.post(
         f"{url}/api/v1/chat/completions",
+        response_format={"type":"json_object"},
         headers=headers,
         json=data,
         timeout=60
@@ -465,6 +468,7 @@ def inference_create_question(args, text, question_type, culture, dimension, que
 
     response = client.chat.completions.create(
         model=inference_model,
+        response_format={"type":"json_object"},
         messages=[
             {
                 "role": "system",
@@ -563,13 +567,13 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
     started = perf_counter()
     if args.api == "openai":
-        result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
+        result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language, dimension=dimension)
     elif args.api == "openrouter":
         result = openrouter_create_question(args, text=knowledge_list, question_type=typ, culture=culture,dimension=dimension, question_language=args.question_language)
     elif args.api == "inference":
         result = inference_create_question(args, text=knowledge_list, question_type=typ, culture=culture, dimension=dimension, question_language=args.question_language)
     else:
-        result = interweb_create_question(args, text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language)
+        result = interweb_create_question(args, text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language, dimension=dimension)
 
     if result is None:
         print(f"{typ} | No question generated.\n")
@@ -580,87 +584,42 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
     #for each question type there is a differnet format to follow
     if question_reference is not None:
+        try:    
+            question_data = json.loads(question_reference)
 
-        if selected_format == "single_choice":
-            question_reference = question_reference.split("Question:", 1)[1]
+        except json.JSONDecodeError:
+            print("Invalid JSON response:")
+            print(question_reference)
 
-            parts = question_reference.split("Reference Answer:", 1)
+            question_cleaned = "EMPTY"
+            abcd_options_cleaned = "EMPTY"
+            reference_answer = "EMPTY"
 
-            question_text = parts[0].replace("Question:", "").replace("Options:", "").strip()
-            
-            split_index = question_text.find("A)")
-            if split_index == -1:
-                split_index = question_text.find("a)")
+        else:
 
-            question = question_text[:split_index].strip()
-            question_cleaned = question.replace("\n", " ")
+            question_cleaned = question_data.get("Question", "EMPTY").strip()
 
-            abcd_options = question_text[split_index:].strip()
-            abcd_options_cleaned = abcd_options.replace("\n", " ").replace("  ", " ")
+            reference_answer = question_data.get(
+                "Reference Answer",
+                "EMPTY"
+            ).strip()
 
-            reference_answer = parts[1].strip()
+            if selected_format == "single_choice":
 
-        if selected_format == "true_false":
-            question_reference = question_reference.split("Question:", 1)[1]
+                options = question_data.get("Options", {})
 
-            question_part, reference_answer = question_reference.split(
-                "Reference Answer:", 1
-            )
+                abcd_options_cleaned = " ".join(
+                    [
+                        f"{key}) {value}"
+                        for key, value in options.items()
+                    ]
+                )
 
-            question_text, _ = question_part.split("Options:", 1)
+            else:
 
-            question_cleaned = " ".join(question_text.split())
+                abcd_options_cleaned = "NA"
 
-            abcd_options_cleaned = "NA"
 
-            reference_answer = " ".join(reference_answer.split())
-        
-        if selected_format == "fill_the_blank":
-            question_reference = question_reference.split("Question:", 1)[1]
-
-            question_part, reference_answer = question_reference.split(
-                "Reference Answer:", 1
-            )
-
-            question_text, _ = question_part.split("Options:", 1)
-
-            question_cleaned = " ".join(question_text.split())
-
-            abcd_options_cleaned = "NA"
-
-            reference_answer = " ".join(reference_answer.split())
-
-        if selected_format == "short_answer":
-
-            question_reference = question_reference.split("Question:", 1)[1]
-
-            question_part, reference_answer = question_reference.split(
-                "Reference Answer:", 1
-            )
-
-            question_text, _ = question_part.split("Options:", 1)
-
-            question_cleaned = " ".join(question_text.split())
-
-            abcd_options_cleaned = "NA"
-
-            reference_answer = " ".join(reference_answer.split())
-
-        if selected_format == "long_answer":
-
-            question_reference = question_reference.split("Question:", 1)[1]
-
-            question_part, reference_answer = question_reference.split(
-                "Reference Answer:", 1
-            )
-
-            question_text, _ = question_part.split("Options:", 1)
-
-            question_cleaned = " ".join(question_text.split())
-
-            abcd_options_cleaned = "NA"
-
-            reference_answer = " ".join(reference_answer.split())
     else:
         question_cleaned = "EMPTY"
         abcd_options_cleaned = "EMPTY"
