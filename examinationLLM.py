@@ -5,6 +5,8 @@ import shutil
 import atexit
 import sys
 from datetime import datetime
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 from graphics import df_model_culture_dimension, plot_model_culture_accuracy, plot_model_culture_qtype_accuracy, plot_model_questiontype_accuracy, plot_model_culture_dimension
 from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student, openai_grader
 import pandas as pd
@@ -128,6 +130,25 @@ def print_examination_summary(df_detail):
 def normalize_answer(text):
     return text.strip().lower().replace(".", "").replace(",", "")
 
+
+semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
+def evaluate_semantic_similarity(student_answer, reference_answer, threshold=0.80):
+    """
+    Evaluates whether a student answer is semantically similar
+    to the reference answer using sentence embeddings.
+    """
+
+    student_answer = student_answer.lower().strip()
+    reference_answer = reference_answer.lower().strip()
+
+    student_embedding = semantic_model.encode([student_answer])
+    reference_embedding = semantic_model.encode([reference_answer])
+
+    similarity = cosine_similarity(student_embedding, reference_embedding)[0][0]
+
+    return similarity >= threshold, float(similarity)
+
+
 def evaluation_result(question, llm_answer, reference_answer, question_type):
     point = 0
 
@@ -138,7 +159,8 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
         if normalize_answer(llm_answer) == normalize_answer(reference_answer):
             point += 1
     elif question_type == "fill_the_blank":
-        if normalize_answer(reference_answer) in normalize_answer(llm_answer):
+        correct, similarity =evaluate_semantic_similarity(llm_answer,reference_answer)
+        if correct:
             point += 1
     elif question_type == "true_false":
         if normalize_answer(llm_answer) == normalize_answer(reference_answer):
