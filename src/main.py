@@ -31,6 +31,12 @@ class TerminalCapture:
         self.document.flush()
 
 def setup_experiment_output():
+    # Remove the previous run's reports before creating the new ones.
+    for pattern in ("experiment_summary_*.txt", "terminal_output_*.txt"):
+        for file_path in RESULTS_DIR.glob(pattern):
+            if file_path.is_file():
+                file_path.unlink()
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
     summary_path = RESULTS_DIR / f"experiment_summary_{timestamp}.txt"
@@ -43,15 +49,18 @@ def setup_experiment_output():
         encoding="utf-8"
     )
 
-    terminal_capture = TerminalCapture(
-        sys.stdout,
-        terminal_output_document
-    )
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = TerminalCapture(original_stdout, terminal_output_document)
+    sys.stderr = TerminalCapture(original_stderr, terminal_output_document)
 
-    sys.stdout = terminal_capture
-    sys.stderr = terminal_capture
+    def close_terminal_output():
+        # Python may flush or report errors after atexit callbacks finish.
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        terminal_output_document.close()
 
-    atexit.register(terminal_output_document.close)
+    atexit.register(close_terminal_output)
 
     return summary_path, terminal_output_path
 
