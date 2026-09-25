@@ -789,3 +789,63 @@ def inference_test(llm_model):
 
 
 
+def parse_question_reference(question_reference, selected_format):
+    """
+    Parse question reference text into question, options, and reference answer.
+
+    Parameters:
+        question_reference (str): Raw question reference text.
+        selected_format (str): Question type format.
+
+    Returns:
+        tuple: question_cleaned, abcd_options_cleaned, reference_answer
+    """
+
+    question_reference = question_reference.split("Question:", 1)[1]
+
+    # Special handling for single choice questions
+    if selected_format == "single_choice":
+
+        parts = question_reference.split("Reference Answer:", 1)
+
+        question_text = (
+            parts[0]
+            .replace("Question:", "")
+            .replace("Options:", "")
+            .strip()
+        )
+
+        split_index = question_text.find("A)")
+        if split_index == -1:
+            split_index = question_text.find("a)")
+
+        question = question_text[:split_index].strip()
+
+        question_cleaned = question.replace("\n", " ")
+
+        abcd_options = question_text[split_index:].strip()
+
+        abcd_options_cleaned = (
+            abcd_options
+            .replace("\n", " ")
+            .replace("  ", " ")
+        )
+
+        reference_answer = parts[1].strip()
+
+    # All other question formats
+    else:
+
+        question_part, reference_answer = question_reference.split(
+            "Reference Answer:", 1
+        )
+
+        question_text = question_part.split("Options:", 1)[0]
+
+        question_cleaned = " ".join(question_text.split())
+
+        abcd_options_cleaned = "NA"
+
+        reference_answer = " ".join(reference_answer.split())
+
+    return question_cleaned, abcd_options_cleaned, reference_answer
