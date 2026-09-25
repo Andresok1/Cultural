@@ -101,9 +101,13 @@ def print_experiment_summary(counts, summary_path=None, culture=None):
 
 def coverage_threshold(stats, show=False):
     coverage_lang = {}
-
+    overall_valid = 0
+    overall_processed= 0
     for lang, item in stats.items():
-        
+
+        overall_valid += item['valid']
+        overall_processed += item['processed']
+
         if item['valid'] == 0:
             coverage=0
         else:
@@ -113,18 +117,17 @@ def coverage_threshold(stats, show=False):
             valid = True
         else: 
             valid = False
-            # print(f"Threshold less than 75% for: {lang}") 
-
 
         coverage_lang[lang] = {
             "relation": f"({item['processed']}/{item['valid']})",
             "coverage": coverage,
             "valid": valid
         }
+    overall_coverage= overall_processed/overall_valid
+    valid_question = overall_coverage >= 0.75
 
     if show:
         for lang, values in coverage_lang.items():
             print(f"    {lang}: relation={values['relation']}, coverage={values['coverage']}, valid={values['valid']}")
 
-
-    return valid
+    return valid_question
