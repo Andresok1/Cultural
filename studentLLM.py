@@ -28,6 +28,36 @@ You must be objective and consistent. Do not judge based on wording differences 
 
 def PROMPT_GRADER(question, reference_answer, llm_answer, question_type):
 
+    if question_type == "fill_the_blank":
+        type_criteria = """
+        For fill-in-the-blank questions:
+        The student does not need to reproduce the complete reference answer.
+        PASS if the student provides the essential information required to correctly
+        complete the sentence.
+
+        Examples, explanations, or additional details in the reference answer are
+        not required unless they are necessary for the meaning of the answer.
+        """
+
+    elif question_type == "short_answer":
+        type_criteria = """
+        For short-answer questions:
+        PASS if the student provides the main information required to answer the question.
+        Minor details or examples from the reference answer may be omitted if the core
+        answer remains correct.
+        """
+
+    elif question_type == "long_answer":
+        type_criteria = """
+        For long-answer questions:
+        Evaluate both correctness and completeness.
+        The student should cover the main ideas required by the question, but does not
+        need to reproduce the reference answer word for word.
+        """
+
+    else:
+        raise ValueError(f"Unsupported question type: {question_type}")
+
     prompt = f"""
     You are grading a student's response.
 
@@ -46,27 +76,34 @@ def PROMPT_GRADER(question, reference_answer, llm_answer, question_type):
     Evaluate the student answer using these criteria:
 
     1. Accuracy:
-    - Does the answer contain correct information?
-    - Are there any factual errors?
+    Does the answer contain correct information?
+    Are there any factual errors or contradictions?
 
-    2. Completeness:
-    - Does the answer cover the main points from the reference answer?
-    - Is important information missing?
+    2. Relevance:
+    Does the answer directly respond to the question?
+    Does it avoid unrelated information?
 
-    3. Relevance:
-    - Does the answer directly respond to the question?
-    - Does it avoid unrelated information?
+    3. Required information:
+    Determine which information from the reference answer is actually necessary
+    to correctly answer the question.
+
+    {type_criteria}
 
     Decision rules:
-    - PASS: The answer is correct and sufficiently complete. Minor wording differences are acceptable.
-    - FAIL: The answer is incorrect, irrelevant, or missing important information.
+
+    PASS:
+    The answer is correct and contains the information required for this question type.
+
+    FAIL:
+    The answer is incorrect, contradictory, irrelevant, or missing essential information.
+
+    Do not judge based on identical wording or lexical similarity.
 
     Return only one word:
     PASS or FAIL.
     """
 
     return prompt
-
 
 def PROMPT_STUDENT(question, options, question_format):
 
