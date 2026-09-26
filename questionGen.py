@@ -3,8 +3,9 @@ from result_paths import KNOWLEDGE_DIR, QUESTIONS_DIR
 import re
 import random
 from time import perf_counter
+import time
 
-from openai import OpenAI
+from openai import APIConnectionError, APITimeoutError, InternalServerError, OpenAI, RateLimitError
 import json
 import os
 from dotenv import load_dotenv
@@ -110,7 +111,7 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
         """,
 
         "short_answer": """
-        Question:    [question]
+        Question: [question]
         Options: "NA"
         Reference Answer: [answer]
 
@@ -442,8 +443,6 @@ def inference_create_question(args, text, question_type, culture, dimension, que
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
 
-    url = "https://inference.kbs.uni-hannover.de"
-    
     if not text:
         print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
         return None
@@ -455,13 +454,12 @@ def inference_create_question(args, text, question_type, culture, dimension, que
 
     prompt_texts = "\n\n".join([f"Text {i}:\n{text}" for i, text in enumerate(texts, 1)])
 
-
     instruction = QUESTION_TYPES[question_type]
 
     prompt, selected_format = PROMPT_QUESTION(instruction, prompt_texts, question_type, language)
 
     client = OpenAI(
-        base_url=f"{url}/v1",
+        base_url=f"https://inference.kbs.uni-hannover.de/v1",
         api_key=os.getenv("INFERENCE_API_KEY"),
         timeout=300,
     )
@@ -675,6 +673,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
 
     for typ in types:
         question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension,knowledge_list=knowledge_list, typ=typ)
+
         checks = {
             "question_not_string": not isinstance(question, str),
             "question_empty": not question.strip(),
@@ -752,43 +751,6 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     return question_counts
 
 
-def inference_test(llm_model):
-    print("HALLOOOO Inference API!!!")
-
-    load_dotenv()
-    INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
-
-    url = "https://inference.kbs.uni-hannover.de"
-    
-    client = OpenAI(
-        base_url=f"{url}/v1",
-        api_key=os.getenv("INFERENCE_API_KEY"),
-        timeout=10
-    )
-
-    response = client.chat.completions.create(
-        model=llm_model,
-        messages=[
-            {
-                "role": "system",
-                "content": "you are german"
-            },
-            {
-                "role": "user",
-                "content": "tell me an story about colombia"
-            }
-        ]
-    )
-
-
-
-    answer = response.choices[0].message.content
-
-
-
-
-
-
 def parse_question_reference(question_reference, selected_format):
     """
     Parse question reference text into question, options, and reference answer.
@@ -833,7 +795,6 @@ def parse_question_reference(question_reference, selected_format):
 
         reference_answer = parts[1].strip()
 
-    # All other question formats
     else:
 
         question_part, reference_answer = question_reference.split(

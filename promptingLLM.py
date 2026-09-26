@@ -285,8 +285,6 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
 
-    url = "https://inference.kbs.uni-hannover.de"
-
     if not text:
         print(f"No documents were given to produce a knowledge entry-> {culture}, {dimension}.")
         return None
@@ -301,7 +299,7 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
     user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
 
     client = OpenAI(
-        base_url=f"{url}/v1",
+        base_url=f"https://inference.kbs.uni-hannover.de/v1",
         api_key=os.getenv("INFERENCE_API_KEY"),
         timeout=300,
     )
