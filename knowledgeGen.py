@@ -4,8 +4,8 @@ import os
 from contextlib import redirect_stdout
 from io import StringIO
 from dimension_summary import extraction_entries, print_dimension_summary, coverage_threshold, write_summary
-
 from questionGen import csv_saver
+from utils import update_empty_knowledge_report
 from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge, inference_create_knowledge
 from deep_translator import MyMemoryTranslator
 
@@ -197,24 +197,3 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
 
     return knowledge_output
 
-def update_empty_knowledge_report(culture, dimension):
-    report_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
-
-    if report_path.exists():
-        with report_path.open("r", encoding="utf-8") as f:
-            report = json.load(f)
-    else:
-        report = []
-
-    report = [
-        entry for entry in report
-        if (entry["culture"], entry["dimension"]) != (culture, dimension)
-    ]
-
-    report.append({
-        "culture": culture,
-        "dimension": dimension
-    })
-
-    with report_path.open("w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
