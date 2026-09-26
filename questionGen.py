@@ -1,4 +1,4 @@
-from promptingLLM import inference_create_knowledge
+from utils import update_empty_knowledge_report
 from result_paths import KNOWLEDGE_DIR, QUESTIONS_DIR
 import re
 import random
@@ -191,6 +191,14 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
     if selected_format == "single_choice" or  selected_format == "true_false":
         random_feature= random_llm(selected_format)
         prompt = prompt + random_feature
+
+    if selected_format in ["short_answer", "long_answer"]:
+        prompt += """
+        IMPORTANT FOR OPEN-ENDED QUESTIONS:
+        The Reference Answer must contain a complete substantive answer.
+        Never write "NA", or leave the Reference Answer blank.
+        Only the Options field should be "NA".
+        """
     
     return prompt, selected_format
 
@@ -437,7 +445,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
 
 
 
-def inference_create_question(args, text, question_type, culture, dimension, question_language, retries=5, language=None):
+def inference_create_question(args, text, question_type, culture, dimension, question_language, retries=2, language=None):
     inference_model = "granite-4.1:8b-bf16"
 
     load_dotenv()
@@ -456,7 +464,7 @@ def inference_create_question(args, text, question_type, culture, dimension, que
 
     instruction = QUESTION_TYPES[question_type]
 
-    prompt, selected_format = PROMPT_QUESTION(instruction, prompt_texts, question_type, language)
+    prompt, selected_format= PROMPT_QUESTION(instruction, prompt_texts, question_type, language)
 
     client = OpenAI(
         base_url=f"https://inference.kbs.uni-hannover.de/v1",
@@ -464,34 +472,101 @@ def inference_create_question(args, text, question_type, culture, dimension, que
         timeout=300,
     )
 
-    response = client.chat.completions.create(
-        model=inference_model,
-        response_format={"type":"json_object"},
-        messages=[
-            {
-                "role": "system",
-                "content": ROLE_QUESTION
-            },
-            {
-                "role": "user",
-                "content": f"{prompt}\n"
-            }
-        ]
-    )
+    for attempt in range(retries + 1):
+        try:
 
-    print(f"{language + ' | ' if language else ''}inference / {inference_model} | Sending request...", flush=True)
-    started = perf_counter()
+            print(f"Question |{language + ' | ' if language else ''}inference / {inference_model} | Sending request...", flush=True)
 
-    answer = response.choices[0].message.content
-    save_raw_question(answer, culture=culture, dimension=dimension, question_type=question_type)
-    
-    print(f"{language + ' | ' if language else ''}inference / {inference_model} | Finished after {perf_counter() - started:.1f}s")
+            started = perf_counter()
 
-    if not answer or not answer.strip():
-        print("WARNING: Empty answer from inference")
-        return None
+            response = client.chat.completions.create(
+                model=inference_model,
+                response_format={"type":"json_object"},
+                messages=[
+                    {
+                        "role": "system",
+                        "content": ROLE_QUESTION
+                    },
+                    {
+                        "role": "user",
+                        "content": f"{prompt}\n"
+                    }
+                ]
+            )
 
-    return answer, selected_format
+            answer = response.choices[0].message.content
+
+            print(f"Question |{language + ' | ' if language else ''}inference / {inference_model} | Finished after {perf_counter() - started:.1f}s")
+
+            if (
+                answer is None
+                or "[]" in answer
+                or answer.strip() == ""
+            ):
+
+                print("Empty response from inference.")
+
+                if attempt < retries:
+                    wait_time = min(2 ** attempt, 60)
+
+                    print(f"Retrying in {wait_time}s...")
+                        
+
+                    time.sleep(wait_time)
+                    continue
+
+                print(
+                    f"Game Over: empty response for "
+                    f"{culture} | {dimension} | {language}"
+                )
+
+                return None
+
+            save_raw_question(answer, culture=culture, dimension=dimension, question_type=question_type)
+
+            return answer, selected_format
+
+        except (
+            InternalServerError,
+            APIConnectionError,
+            APITimeoutError,
+            RateLimitError
+        ) as e:
+
+            print(
+                f"API error on attempt "
+                f"{attempt + 1}/{retries + 1}:"
+            )
+
+            print(
+                f"Timeout after {perf_counter()-started:.1f}s"
+            )
+
+            print(f"{type(e).__name__}: {e}")
+
+            if attempt >= retries:
+
+                print(f"Game Over: {culture} | {dimension} | {language}")
+
+                return None
+
+            wait_time = min(15 * (2 ** attempt), 60)
+
+            print(f"Retrying in {wait_time}s...")                
+
+            time.sleep(wait_time)
+
+        except Exception as e:
+
+            print(
+                f"Unexpected error: "
+                f"{type(e).__name__}: {e}"
+            )
+
+            return None
+
+    return None
+
 
 def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
     """Prepare valid knowledge and record dimensions empty across all languages."""
@@ -597,10 +672,12 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
             question_cleaned = question_data.get("Question", "EMPTY").strip()
 
-            reference_answer = question_data.get(
-                "Reference Answer",
-                "EMPTY"
-            ).strip()
+            if selected_format == "short_answer":
+                question_cleaned += " Write a concise answer to the question above. Expected answer length: 3-5 sentences."
+            elif selected_format == "long_answer":
+                question_cleaned += " Write a detailed essay answering the question above. Explain your answer clearly and provide the main reasons supporting it. Expected answer length: 5-8 sentences."
+
+            reference_answer = question_data.get("Reference Answer", "EMPTY").strip()
 
             if selected_format == "single_choice":
 
@@ -681,6 +758,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
             "question_not_enough_information": "NOT ENOUGH INFORMATION" in question.upper(),
             "answer_not_string": not isinstance(reference_answer, str),
             "answer_empty": not reference_answer.strip(),
+            "answer_NA": (reference_answer.strip().upper() == "NA"),
             "answer_is_EMPTY": reference_answer.strip().upper() == "EMPTY",
             "answer_not_enough_information": "NOT ENOUGH INFORMATION" in reference_answer.upper()
         }
@@ -689,6 +767,9 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
 
         if failed:
             print("Question rejected because:", failed)
+
+            update_empty_knowledge_report(culture, dimension)
+
         else:
             question_counts += 1
 
