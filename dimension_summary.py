@@ -123,7 +123,12 @@ def coverage_threshold(stats, show=False):
             "coverage": coverage,
             "valid": valid
         }
-    overall_coverage= overall_processed/overall_valid
+        
+    if overall_valid == 0:
+        overall_coverage = 0
+    else:
+        overall_coverage= overall_processed/overall_valid
+
     valid_question = overall_coverage >= 0.75
 
     if show:
