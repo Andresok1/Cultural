@@ -8,7 +8,7 @@ from datetime import datetime
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from graphics import df_model_culture_dimension, plot_model_culture_accuracy, plot_model_culture_qtype_accuracy, plot_model_questiontype_accuracy, plot_model_culture_dimension
-from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student, openai_grader
+from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student, openai_grader,inference_grader
 import pandas as pd
 
 
@@ -149,6 +149,8 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
             result= openrouter_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
         elif GRADER_ENDPOINT == "openai":
             result= openai_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
+        elif GRADER_ENDPOINT == "inference":
+            result = inference_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM)
         else:
             raise ValueError(f"Unknown grader endpoint: {GRADER_ENDPOINT}")
         
@@ -218,16 +220,18 @@ def examination(llm_model, examination_data, student):
                                 options,
                                 question_format, 
                                 culture,
-                                dimension
+                                dimension,
+                                status_label=question_type
                             )
                         elif student == "openrouter":
                             answer = openrouter_student(
                                 llm_model, 
                                 question, 
                                 options,
-                                question_format, 
+                                question_format,
+                                status_label=question_type
                             )
-                        elif student == "openai":
+                        elif student == "interweb":
                             answer = interweb_student(
                                 llm_model, 
                                 question, 
@@ -305,8 +309,12 @@ def examination(llm_model, examination_data, student):
         for d in metrics[c]
         for q in metrics[c][d]
     )
-    
-    accuracy = correct_counter/questions_size
+
+    if questions_size == 0:
+        accuracy = 0
+        print("Error: question_size is zero")
+    else:
+        accuracy = correct_counter/questions_size
 
     for culture in metrics:
         for dimension in metrics[culture]:
@@ -341,9 +349,11 @@ STUDENT_MODELS = {
         "gpt-4o",
     ],
 
-    "interweb": [
-        "openai/gpt-5.6-luna",
-        "qwen/qwen3.7-flash",
+    "openrouter": [
+        "qwen/qwen3.5-9b",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "cohere/north-mini-code:free",
+        "liquid/lfm-2.5-2.6b:free",
     ],
 
     "inference": [
@@ -359,10 +369,10 @@ GRADER_MODELS = {
     "inference": "granite-4.1:8b-bf16",
 }
 
-STUDENT_ENDPOINT = "openai"
+STUDENT_ENDPOINT = "openrouter"
 models = STUDENT_MODELS[STUDENT_ENDPOINT]
 
-GRADER_ENDPOINT = "openai"
+GRADER_ENDPOINT = "inference"
 GRADER_LLM = GRADER_MODELS[GRADER_ENDPOINT]
 
 examination_results = {}
