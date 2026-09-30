@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from graphics import df_model_culture_dimension, plot_model_culture_accuracy, plot_model_culture_qtype_accuracy, plot_model_questiontype_accuracy, plot_model_culture_dimension
+from graphics import df_model_culture_dimension
 from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student, openai_grader,inference_grader
 import pandas as pd
 
@@ -466,14 +466,5 @@ df.to_csv(
     EXAM_DIR / "model_culture_questiontype_results.csv",
     index=False
 )
-
-#Graphics
-plot_model_culture_accuracy(df)
-plot_model_questiontype_accuracy(df)
-plot_model_culture_qtype_accuracy(df)
-
-df_dimension = df_model_culture_dimension(df_detail)
-
-plot_model_culture_dimension(df_dimension)
 
 print_examination_summary(df_detail)
