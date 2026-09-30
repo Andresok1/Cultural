@@ -176,11 +176,12 @@ def examination(llm_model, examination_data, student):
 
         answers[culture] = {}
         metrics[culture] = {}
-
-        for dimension, question_types in dimensions.items():
+        
+        total_dimensions = len(dimensions)
+        for idx, (dimension, question_types) in enumerate(dimensions.items(), start=1):
 
             print("=" * 72)
-            print(f"DIMENSION: {culture} | {dimension}")
+            print(f"DIMENSION: {idx}/{total_dimensions}: {culture} | {dimension}")
             print()
 
             answers[culture][dimension] = {}
@@ -337,6 +338,8 @@ question_path = QUESTIONS_DIR / "questions.json"
 with open(question_path, "r", encoding="utf-8") as file:
     data = json.load(file)
 
+for culture, dimensions in data.items():
+    print(f"{culture}: {len(dimensions)} dimensions")
 
 STUDENT_MODELS = {
     "openai": [
