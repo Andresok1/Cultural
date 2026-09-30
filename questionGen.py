@@ -618,26 +618,8 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
 def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
     '''This function separates title, snippet and knowledge from the knowledge_path and clean them. and separates them into lists to better visualization and data control to create a question.
     It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
-    It creates at the end the question_reference_{timestamp}.json file with the question, options and reference answer.
-
-    return:
-    question_cleaned, abcd_options_cleaned, reference_answer, knowledge_list, title_list, snippet_list, selected_format
+    Returns the question text, options, reference answer, and selected format.
     '''
-    output_path = QUESTIONS_DIR / "questions.json"
-            
-    
-    if os.path.exists(output_path):
-        with open(output_path, "r", encoding="utf-8") as f:
-            question_vector = json.load(f)
-    else:
-        question_vector = {}
-
-    if culture not in question_vector:
-        question_vector[culture] = {}
-
-    if dimension not in question_vector[culture]:
-        question_vector[culture][dimension] = {}
-
     started = perf_counter()
     if args.api == "openai":
         result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language, dimension=dimension)
@@ -645,8 +627,11 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
         result = openrouter_create_question(args, text=knowledge_list, question_type=typ, culture=culture,dimension=dimension, question_language=args.question_language)
     elif args.api == "inference":
         result = inference_create_question(args, text=knowledge_list, question_type=typ, culture=culture, dimension=dimension, question_language=args.question_language)
-    else:
+    elif args.api == "interweb":
         result = interweb_create_question(args, text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language, dimension=dimension)
+    else:
+        print("INVALID ENDPOINT SELECTED FOR QUESTION CREATION")
+        return "EMPTY", "EMPTY", "EMPTY", None
 
     if result is None:
         print(f"{typ} | No question generated.\n")
@@ -683,12 +668,22 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
                 options = question_data.get("Options", {})
 
-                abcd_options_cleaned = " ".join(
-                    [
-                        f"{key}) {value}"
-                        for key, value in options.items()
-                    ]
-                )
+                if isinstance(options, dict):
+                    abcd_options_cleaned = " ".join(
+                        [
+                            f"{key}) {value}"
+                            for key, value in options.items()
+                        ]
+                    )
+
+                elif isinstance(options, list):
+                    abcd_options_cleaned = " ".join(
+                        str(option).strip()
+                        for option in options
+                    )
+
+                else:
+                    abcd_options_cleaned = "EMPTY"
 
             else:
 
@@ -700,28 +695,6 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
         abcd_options_cleaned = "EMPTY"
         reference_answer = "EMPTY"
 
-
-    if typ not in question_vector[culture][dimension]:
-        question_vector[culture][dimension][typ] = []
-
-    if selected_format == "single_choice":
-        question_vector[culture][dimension][typ].append({
-            "format": selected_format,
-            "question": question_cleaned,
-            "options": abcd_options_cleaned,
-            "reference_answer": reference_answer    
-        })
-    else:
-        question_vector[culture][dimension][typ].append( {
-            "format": selected_format,
-            "question": question_cleaned,
-            "options": abcd_options_cleaned,
-            "reference_answer": reference_answer
-        })
-
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(question_vector, f, ensure_ascii=False, indent=2)
 
     if question_reference is not None:
         print(f"{typ:<10} | Finished after {perf_counter() - started:.1f}s", flush=True)
@@ -748,19 +721,36 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
     else: 
         types = [args.question_type]
 
+    question_output_path = QUESTIONS_DIR / "questions.json"
+    if question_output_path.exists():
+        with open(question_output_path, "r", encoding="utf-8") as f:
+            question_vector = json.load(f)
+    else:
+        question_vector = {}
+
     for typ in types:
-        question, abcd_options, reference_answer, selected_format = knowledge_to_question(args, culture, dimension,knowledge_list=knowledge_list, typ=typ)
+        question, abcd_options, reference_answer, selected_format = knowledge_to_question(
+            args, culture, dimension, knowledge_list=knowledge_list, typ=typ
+        )
+
+        question_text = question.strip().upper() if isinstance(question, str) else ""
+        options_text = abcd_options.strip().upper() if isinstance(abcd_options, str) else ""
+        answer_text = reference_answer.strip().upper() if isinstance(reference_answer, str) else ""
 
         checks = {
             "question_not_string": not isinstance(question, str),
-            "question_empty": not question.strip(),
-            "question_is_EMPTY": question.strip().upper() == "EMPTY",
-            "question_not_enough_information": "NOT ENOUGH INFORMATION" in question.upper(),
+            "question_empty": not question_text,
+            "question_is_EMPTY": question_text == "EMPTY",
+            "question_not_enough_information": "NOT ENOUGH INFORMATION" in question_text,
             "answer_not_string": not isinstance(reference_answer, str),
-            "answer_empty": not reference_answer.strip(),
-            "answer_NA": (reference_answer.strip().upper() == "NA"),
-            "answer_is_EMPTY": reference_answer.strip().upper() == "EMPTY",
-            "answer_not_enough_information": "NOT ENOUGH INFORMATION" in reference_answer.upper()
+            "answer_empty": not answer_text,
+            "answer_NA": answer_text == "NA",
+            "answer_is_EMPTY": answer_text == "EMPTY",
+            "answer_not_enough_information": "NOT ENOUGH INFORMATION" in answer_text,
+            "options_not_string": selected_format == "single_choice" and not isinstance(abcd_options, str),
+            "options_empty": selected_format == "single_choice" and not options_text,
+            "options_is_EMPTY": selected_format == "single_choice" and options_text == "EMPTY",
+            "options_not_enough_information": selected_format == "single_choice" and "NOT ENOUGH INFORMATION" in options_text,
         }
 
         failed = [name for name, result in checks.items() if result]
@@ -772,6 +762,16 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
 
         else:
             question_counts += 1
+
+            question_vector.setdefault(culture, {}).setdefault(dimension, {}).setdefault(typ, []).append({
+                "format": selected_format,
+                "question": question,
+                "options": abcd_options,
+                "reference_answer": reference_answer,
+            })
+            with open(question_output_path, "w", encoding="utf-8") as f:
+                json.dump(question_vector, f, ensure_ascii=False, indent=2)
+
 
         output_path = KNOWLEDGE_DIR / f"knowledge_output_{timestamp}.json"
 
@@ -799,6 +799,9 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
 
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(knowledge_vector, f, ensure_ascii=False, indent=2)
+
+        if failed:
+            continue
 
         ### QUESTION PREPARATION 
         if selected_format == "single_choice":
