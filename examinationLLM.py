@@ -10,6 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from graphics import df_model_culture_dimension
 from studentLLM import interweb_student, openrouter_grader, openrouter_student,inference_student,openai_student, openai_grader,inference_grader
 import pandas as pd
+import argparse
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -57,9 +58,6 @@ def clear_exam_directory():
         else:
             item.unlink()
 
-
-clear_exam_directory()
-setup_examination_output()
 
 def print_banner(text):
     width = len(text) + 10
@@ -162,15 +160,21 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
 
     return point
 
-def examination(llm_model, examination_data, student):
+def load_questions():   
+    question_path = QUESTIONS_DIR / "questions.json"
+
+    with open(question_path, "r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    for culture, dimensions in data.items():
+        print(f"{culture}: {len(dimensions)} dimensions")
+    return data
+
+def examination(llm_model, examination_data, endpoint):
     answers = {}
     metrics = {}
     failed_questions = []
     correct_counter = 0
-
-    print("\n" + "*" * 72)
-    print(f"*** Evaluating student model: {llm_model} ***")
-    print("*" * 72 + "\n")
 
     for culture, dimensions in examination_data.items():
 
@@ -204,7 +208,7 @@ def examination(llm_model, examination_data, student):
 
                     stage = "student"
                     try: 
-                        if student == "inference":
+                        if endpoint == "inference":
                             answer = inference_student(
                                 llm_model, 
                                 question, 
@@ -214,7 +218,7 @@ def examination(llm_model, examination_data, student):
                                 dimension,
                                 status_label=question_type
                             )
-                        elif student == "openai":
+                        elif endpoint == "openai":
                             answer = openai_student(
                                 llm_model, 
                                 question, 
@@ -224,7 +228,7 @@ def examination(llm_model, examination_data, student):
                                 dimension,
                                 status_label=question_type
                             )
-                        elif student == "openrouter":
+                        elif endpoint == "openrouter":
                             answer = openrouter_student(
                                 llm_model, 
                                 question, 
@@ -232,7 +236,7 @@ def examination(llm_model, examination_data, student):
                                 question_format,
                                 status_label=question_type
                             )
-                        elif student == "interweb":
+                        elif endpoint == "interweb":
                             answer = interweb_student(
                                 llm_model, 
                                 question, 
@@ -268,7 +272,7 @@ def examination(llm_model, examination_data, student):
                             correct_counter += point
 
                             answers[culture][dimension][question_type].append({
-                                "question:": question,
+                                "question": question,
                                 "llm_answer": answer,
                                 "reference_answer": reference_answer,
                                 "score" : point,
@@ -281,7 +285,11 @@ def examination(llm_model, examination_data, student):
                                 "model": llm_model,
                                 "culture": culture,
                                 "dimension": dimension,
-                                "type": question_type
+                                "type": question_type,
+                                "format": question_format,
+                                "question": question,
+                                "options": options,
+                                "reference_answer": reference_answer
                             }
                             if failed_question not in failed_questions:
                                 failed_questions.append(failed_question)
@@ -297,7 +305,11 @@ def examination(llm_model, examination_data, student):
                             "model": llm_model,
                             "culture": culture,
                             "dimension": dimension,
-                            "type": question_type
+                            "type": question_type,
+                            "format": question_format,
+                            "question": question,
+                            "options": options,
+                            "reference_answer": reference_answer
                         }
                         if failed_question not in failed_questions:
                             failed_questions.append(failed_question)
@@ -331,15 +343,7 @@ def examination(llm_model, examination_data, student):
     return accuracy, answers, metrics, failed_questions
 
 
-print_banner("STARTING EXAM")
 
-question_path = QUESTIONS_DIR / "questions.json"
-
-with open(question_path, "r", encoding="utf-8") as file:
-    data = json.load(file)
-
-for culture, dimensions in data.items():
-    print(f"{culture}: {len(dimensions)} dimensions")
 
 STUDENT_MODELS = {
     "openai": [
@@ -378,93 +382,219 @@ models = STUDENT_MODELS[STUDENT_ENDPOINT]
 GRADER_ENDPOINT = "inference"
 GRADER_LLM = GRADER_MODELS[GRADER_ENDPOINT]
 
-examination_results = {}
-results_table = []
-failed_questions = []
+def save_exam_results(examination_results):
+    output_path = EXAM_DIR / "exam_results.json"
+    with open(output_path, "w", encoding="utf-8") as file:
+        json.dump(
+            examination_results,
+            file,
+            indent=4,
+            ensure_ascii=False
+        )
 
-for model in models:
-    accuracy, answers, metrics, model_failed_questions = examination(
-        model,
-        data,
-        STUDENT_ENDPOINT
+def save_failed_questions(failed_questions):
+    with open(EXAM_DIR / "failed_questions.json", "w", encoding="utf-8") as file:
+        json.dump(
+            failed_questions,
+            file,
+            indent=4,
+            ensure_ascii=False
+        )
+
+def save_csv(results_table):
+    df_detail = pd.DataFrame(results_table)
+
+    df_detail.to_csv(
+        EXAM_DIR / "model_culture_dimension_questiontype_results.csv",
+        index=False
     )
 
-    for failed_question in model_failed_questions:
-        if failed_question not in failed_questions:
-            failed_questions.append(failed_question)
+    df = pd.DataFrame(results_table)
 
-    examination_results[model] = {
-        "accuracy": accuracy,
-        "answers": answers
-    }
-
-    for culture in metrics:
-        for dimension in metrics[culture]:
-            for qtype in metrics[culture][dimension]:
-
-                key = {
-                    "model": model,
-                    "culture": culture,
-                    "dimension": dimension,
-                    "question_type": qtype
-                }
-
-                results_table.append({
-                    **key,
-                    "correct": metrics[culture][dimension][qtype]["correct"],
-                    "total": metrics[culture][dimension][qtype]["total"]
-                })
-
-
-output_path = EXAM_DIR / "exam_results.json"
-with open(output_path, "w", encoding="utf-8") as file:
-    json.dump(
-        examination_results,
-        file,
-        indent=4,
-        ensure_ascii=False
+    df = (
+        df
+        .groupby(
+            [
+                "model",
+                "culture",
+                "question_type"
+            ]
+        )
+        .agg(
+            {
+                "correct":"sum",
+                "total":"sum"
+            }
+        )
+        .reset_index()
     )
 
-with open(EXAM_DIR / "failed_questions.json", "w", encoding="utf-8") as file:
-    json.dump(
-        failed_questions,
-        file,
-        indent=4,
-        ensure_ascii=False
+    df["accuracy"] = df["correct"] / df["total"]
+
+    df.to_csv(
+        EXAM_DIR / "model_culture_questiontype_results.csv",
+        index=False
+    )
+    return df_detail
+
+def run_full_exam():
+
+    clear_exam_directory()
+    setup_examination_output()
+
+    data= load_questions()
+
+    results_table = []
+    failed_questions = []
+    examination_results = {}
+
+    for endpoint, models,  in STUDENT_MODELS.items():
+        for model in models:
+            print("\n" + "*" * 72)
+            print(f"*** Evaluating student model: {endpoint} | {model} ***")
+            print("*" * 72 + "\n")
+
+            accuracy, answers, metrics, model_failed_questions = examination(
+                model,
+                data,
+                endpoint
+            )
+
+            for failed_question in model_failed_questions:
+                if failed_question not in failed_questions:
+                    failed_questions.append(failed_question)
+
+            print(model)
+
+            examination_results[model] = {
+                "accuracy": accuracy,
+                "answers": answers
+            }
+
+            for culture in metrics:
+                for dimension in metrics[culture]:
+                    for qtype in metrics[culture][dimension]:
+
+                        key = {
+                            "model": model,
+                            "culture": culture,
+                            "dimension": dimension,
+                            "question_type": qtype
+                        }
+
+                        results_table.append({
+                            **key,
+                            "correct": metrics[culture][dimension][qtype]["correct"],
+                            "total": metrics[culture][dimension][qtype]["total"]
+                        })
+
+
+    save_exam_results(examination_results)
+    save_failed_questions(failed_questions)
+    df_detail = save_csv(results_table)
+    print_examination_summary(df_detail)
+
+
+def retry_failed_questions():
+
+    with open(EXAM_DIR / "failed_questions.json") as file:
+        failed_questions = json.load(file)
+
+    remaining_failed = []
+
+    for item in failed_questions:
+
+        print(
+            f"Retrying {item['model']} | "
+            f"{item['culture']} | "
+            f"{item['dimension']}"
+            f"{item['type']} | "
+        )
+
+        answer = openrouter_student(
+            item["model"],
+            item["question"],
+            item["options"],
+            item["format"]
+        )
+
+        if answer is not None:
+
+            score = evaluation_result(
+                item["question"],
+                answer,
+                item["reference_answer"],
+                item["format"]
+            )
+
+            update_exam_results(
+                item,
+                answer,
+                score
+            )
+        else:
+            remaining_failed.append(item)
+
+    with open(EXAM_DIR / "failed_questions.json", "w") as file:
+        json.dump(
+            remaining_failed,
+            file,
+            indent=4
+        )
+
+def update_exam_results(item, answer, score):
+
+    with open(EXAM_DIR / "exam_results.json") as file:
+        results = json.load(file)
+
+    model = item["model"]
+
+    questions = results[model]["answers"]
+
+    for culture in questions:
+        if culture== item["culture"]:
+
+            for dimension in questions[culture]:
+                if dimension== item["dimension"]:
+                    for qtype in questions[culture][dimension]:
+                        if qtype== item["type"]:
+                            print(f"exam_result.json updated ´with: {culture} | {dimension} | {qtype}")
+                            questions[culture][dimension][qtype].append({
+                                "question": item["question"],
+                                "llm_answer": answer,
+                                "reference_answer": item["reference_answer"],
+                                "score": score,
+                            })
+
+    with open(EXAM_DIR / "exam_results.json", "w") as file:
+        json.dump(results, file, indent=4)
+
+
+
+def main(mode="full"):
+
+    if mode == "full":
+        print_banner("STARTING EXAM")
+
+        run_full_exam()
+
+    elif mode == "retry":
+        print_banner("COMPLETING EXAM")
+        retry_failed_questions()
+
+    print("\nTo proceed with the charts, execute: python graphics.py")
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--mode",
+        choices=["full", "retry"],
+        default="full"
     )
 
-df_detail = pd.DataFrame(results_table)
+    args = parser.parse_args()
 
-df_detail.to_csv(
-    EXAM_DIR / "model_culture_dimension_questiontype_results.csv",
-    index=False
-)
-
-df = pd.DataFrame(results_table)
-
-df = (
-    df
-    .groupby(
-        [
-            "model",
-            "culture",
-            "question_type"
-        ]
-    )
-    .agg(
-        {
-            "correct":"sum",
-            "total":"sum"
-        }
-    )
-    .reset_index()
-)
-
-df["accuracy"] = df["correct"] / df["total"]
-
-df.to_csv(
-    EXAM_DIR / "model_culture_questiontype_results.csv",
-    index=False
-)
-
-print_examination_summary(df_detail)
+    main(args.mode)
