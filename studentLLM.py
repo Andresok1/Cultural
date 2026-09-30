@@ -231,10 +231,11 @@ def PROMPT_STUDENT(question, options, question_format):
     return prompt
 
 
-def interweb_student(llm_model, question, options, question_format, retries = 5):
+def interweb_student(llm_model, question, options, question_format, retries = 2):
     """
     LLM takes the rol from a student and it answers the question given to it.
     """
+    status_label = status_label or question_format
 
     load_dotenv()
     INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
@@ -261,64 +262,85 @@ def interweb_student(llm_model, question, options, question_format, retries = 5)
         ]
     }
 
-    try:
-            
-        response = requests.post(
-            f"https://interweb.l3s.uni-hannover.de/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
+    for attempt in range(retries):
+        try:
 
-        if response.status_code != 200:
-            print("Error:", response.status_code, response.text)
-
-            if retries > 0:
-                print(f"Retrying... attempts left: {retries}")
-                return interweb_student(
-                    llm_model,
-                    question,
-                    options,
-                    retries - 1
-                )
-            
-            return None
-        
-        answer = response.json()["choices"][0]["message"]["content"]
-
-        if answer is None or "[]" in answer or answer.strip() == "":
-            if retries > 0:
-                print(f"Empty response. Retrying... attempts left: {retries}")
-                return interweb_student(
-                    llm_model,
-                    question,
-                    options,
-                    retries - 1
-                )
-
-            return None
-
-        return answer
-    
-    except requests.exceptions.RequestException as e:
-        print("Request failed:", e)
-
-        if retries > 0:
-            return interweb_student(
-                llm_model,
-                question,
-                options,
-                retries - 1
+            print(
+                f"{'ANSWERING':<9} | {status_label:<10} | "
+                f"openrouter / {llm_model} | "
+                f"Sending request "
+                f"(attempt {attempt + 1}/{retries + 1})...",
+                flush=True
             )
 
-        return None
+            started = perf_counter()
+            
+            response = requests.post(
+                f"https://interweb.l3s.uni-hannover.de/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+
+            answer = response.json()["choices"][0]["message"]["content"]
+
+
+            if response.status_code != 200:
+                print("Error:", response.status_code, response.text)
+
+                if retries > 0:
+                    print(f"Retrying... attempts left: {retries}")
+                    return interweb_student(
+                        llm_model,
+                        question,
+                        options,
+                        retries - 1
+                    )
+                
+                return None
+            
+
+            if answer is None or "[]" in answer or answer.strip() == "":
+                if retries > 0:
+                    print(f"Empty response. Retrying... attempts left: {retries}")
+                    return interweb_student(
+                        llm_model,
+                        question,
+                        options,
+                        retries - 1
+                    )
+
+                return None
+
+            print(
+                f"{'ANSWERING':<9} | {status_label:<10} | "
+                f"openrouter / {llm_model} | "
+                f"Finished after "
+                f"{perf_counter() - started:.1f}s"
+            )
+
+            return answer
+        
+        except requests.exceptions.RequestException as e:
+            print("Request failed:", e)
+
+            if retries > 0:
+                return interweb_student(
+                    llm_model,
+                    question,
+                    options,
+                    retries - 1
+                )
+
+            return None
 
 
 
-def openrouter_student(llm_model, question, options, question_format, retries = 5):
+def openrouter_student(llm_model, question, options, question_format, retries = 2, status_label=None):
     """
     LLM takes the rol from a student and it answers the question given to it using Openrouter.
     """
+    status_label = status_label or question_format
 
     load_dotenv()
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -345,6 +367,17 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
     }
 
     for attempt in range(retries):
+
+        print(
+            f"{'ANSWERING':<9} | {status_label:<10} | "
+            f"openrouter / {llm_model} | "
+            f"Sending request "
+            f"(attempt {attempt + 1}/{retries + 1})...",
+            flush=True
+        )
+
+        started = perf_counter()
+
  
         response = requests.post(
             f"https://openrouter.ai/api/v1/chat/completions",
@@ -353,14 +386,21 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
             timeout=60
         )
 
-        if response.status_code == 200:
+        answer = response.json()["choices"][0]["message"]["content"]
 
-            answer = response.json()["choices"][0]["message"]["content"]
+        if response.status_code == 200:
+            print(
+                f"{'ANSWERING':<9} | {status_label:<10} | "
+                f"openrouter / {llm_model} | "
+                f"Finished after "
+                f"{perf_counter() - started:.1f}s"
+            )
+
             return answer
 
         elif response.status_code == 429:
 
-            wait_time = 10
+            wait_time = min(2 ** attempt, 60)
 
             print(
                 f"429 Rate limit {llm_model}. "
@@ -373,15 +413,12 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
         else: 
             response.raise_for_status()
 
-    raise RuntimeError(
-    f"{llm_model} failed after {retries} retries"
-
-    )
+    raise RuntimeError(f"openrouter/ {llm_model} failed after {retries} retries")
 
 
-def openrouter_grader(question, reference_answer, llm_answer, question_type, retries = 3):
+def openrouter_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM, retries = 3):
 
-    llm_model= "qwen/qwen3.8-max-0902"
+    openrouter_model= GRADER_LLM
 
     load_dotenv()
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -394,7 +431,7 @@ def openrouter_grader(question, reference_answer, llm_answer, question_type, ret
     user_prompt = PROMPT_GRADER(question, reference_answer, llm_answer, question_type)
 
     data = {
-        "model": llm_model,
+        "model": openrouter_model,
         "messages": [
             {
                 "role": "system",
@@ -555,8 +592,7 @@ def inference_student(
 
 def openai_student(llm_model, question, options, question_format, culture, dimension, retries = 2, status_label=None):
 
-    openai_model = llm_model  # Use the model specified in the command-line arguments
-    status_label = status_label or question_format
+    status_label = question_format
 
     user_prompt = PROMPT_STUDENT(question, options, question_format)
 
@@ -574,7 +610,7 @@ def openai_student(llm_model, question, options, question_format, culture, dimen
 
             print(
                 f"{'ANSWERING':<9} | {status_label:<10} | "
-                f"openai / {openai_model} | "
+                f"openai / {llm_model} | "
                 f"Sending request "
                 f"(attempt {attempt + 1}/{retries + 1})...",
                 flush=True
@@ -583,7 +619,7 @@ def openai_student(llm_model, question, options, question_format, culture, dimen
             started = perf_counter()
 
             response = client.chat.completions.create(
-                model= openai_model,
+                model= llm_model,
                 messages=[
                     {
                         "role": "user", 
@@ -597,7 +633,7 @@ def openai_student(llm_model, question, options, question_format, culture, dimen
 
             print(
                 f"{'ANSWERING':<9} | {status_label:<10} | "
-                f"openai / {openai_model} | "
+                f"openai / {llm_model} | "
                 f"Finished after "
                 f"{perf_counter() - started:.1f}s"
             )
@@ -676,10 +712,9 @@ def openai_grader(question, reference_answer, llm_answer, question_type, GRADER_
 
 
     load_dotenv()
-    OPENAI_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
     client = OpenAI(
-        api_key= os.getenv(OPENAI_API_KEY),
+        api_key= os.getenv("OPENAI_API_KEY"),
         base_url="https://api.openai.com/v1",
         timeout=300,
     )
@@ -697,7 +732,7 @@ def openai_grader(question, reference_answer, llm_answer, question_type, GRADER_
                 messages=[
                     {
                         "role": "user", 
-                        "content": ROLE_STUDENT + user_prompt
+                        "content": ROLE_GRADER + user_prompt
                     }
                 ]
             )
@@ -751,6 +786,109 @@ def openai_grader(question, reference_answer, llm_answer, question_type, GRADER_
             if attempt >= retries:
 
                 print(f"Game Over!!")
+
+                return None
+
+            wait_time = min(15 * (2 ** attempt), 60)
+
+            print(f"Retrying in {wait_time}s...")                
+
+            time.sleep(wait_time)
+
+        except Exception as e:
+
+            print(
+                f"Unexpected error: "
+                f"{type(e).__name__}: {e}"
+            )
+
+            return None
+
+    return None
+
+
+
+def inference_grader(question, reference_answer, llm_answer, question_type, GRADER_LLM, retries = 3):
+
+    inference_model = GRADER_LLM  
+
+
+    load_dotenv()
+
+    client = OpenAI(
+        api_key= os.getenv("INFERENCE_API_KEY"),
+        base_url="https://inference.kbs.uni-hannover.de/v1",
+        timeout=300,
+    )
+
+    user_prompt = PROMPT_GRADER(question, reference_answer, llm_answer, question_type)
+
+    for attempt in range(retries + 1):
+        try:
+
+            started = perf_counter()
+
+            response = client.chat.completions.create(
+                model=inference_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": ROLE_GRADER
+                    },
+                    {
+                        "role": "user",
+                        "content": f"{user_prompt}\n"
+                    }
+                ]
+            )
+
+            answer = response.choices[0].message.content
+
+
+            if (
+                answer is None
+                or "[]" in answer
+                or answer.strip() == ""
+            ):
+
+                print("Empty response from inference.")
+
+                if attempt < retries:
+                    wait_time = min(2 ** attempt, 60)
+
+                    print(f"Retrying in {wait_time}s...")
+                        
+
+                    time.sleep(wait_time)
+                    continue
+
+                print(f"Game Over: {question_type} empty response from Grader")
+
+                return None
+
+            return answer
+
+        except (
+            InternalServerError,
+            APIConnectionError,
+            APITimeoutError,
+            RateLimitError
+        ) as e:
+
+            print(
+                f"API error on attempt "
+                f"{attempt + 1}/{retries + 1}:"
+            )
+
+            print(
+                f"Timeout after {perf_counter()-started:.1f}s"
+            )
+
+            print(f"{type(e).__name__}: {e}")
+
+            if attempt >= retries:
+
+                print(f"Game Over: {question_type}")
 
                 return None
 
