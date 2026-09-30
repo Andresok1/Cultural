@@ -201,3 +201,26 @@ def plot_model_culture_dimension(df_dimension):
     )
 
     # plt.show()
+
+if __name__ == "__main__":
+    df = pd.read_csv(EXAM_DIR / "model_culture_questiontype_results.csv")
+    df_detail = pd.read_csv(
+        EXAM_DIR / "model_culture_dimension_questiontype_results.csv"
+    )
+
+    question_totals = df_detail.groupby("model")["total"].sum()
+    print("Evaluated questions per student model:")
+    print(question_totals.to_string())
+
+    if question_totals.nunique() != 1:
+        raise SystemExit(
+            "Graphs were not generated: student models have different "
+            "numbers of evaluated questions."
+        )
+
+    plot_model_culture_accuracy(df)
+    plot_model_questiontype_accuracy(df)
+    plot_model_culture_qtype_accuracy(df)
+
+    df_dimension = df_model_culture_dimension(df_detail)
+    plot_model_culture_dimension(df_dimension)
