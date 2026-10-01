@@ -131,6 +131,13 @@ def normalize_answer(text):
 def evaluation_result(question, llm_answer, reference_answer, question_type):
     point = 0
 
+    print(
+    f"{'GRADING':<9} | {question_type:<10} | "
+    f"{GRADER_ENDPOINT} / {GRADER_LLM} | "
+    "Checking answer...",
+    flush=True
+    )
+
     if llm_answer is None:
         return "No answer"
     
@@ -157,6 +164,15 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
 
         if result == "PASS":
             point += 1
+
+    
+    print(
+        f"{'GRADING':<9} | {question_type:<10} | "
+        f"{GRADER_ENDPOINT} / {GRADER_LLM} | "
+        "Finished",
+        flush=True
+    )
+    print("\n")
 
     return point
 
