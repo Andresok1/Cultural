@@ -366,7 +366,7 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
         ]
     }
 
-    for attempt in range(retries):
+    for attempt in range(retries + 1):
 
         print(
             f"{'ANSWERING':<9} | {status_label:<10} | "
@@ -378,40 +378,47 @@ def openrouter_student(llm_model, question, options, question_format, retries = 
 
         started = perf_counter()
 
- 
-        response = requests.post(
-            f"https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=60
-        )
-
-        answer = response.json()["choices"][0]["message"]["content"]
-
-        if response.status_code == 200:
-            print(
-                f"{'ANSWERING':<9} | {status_label:<10} | "
-                f"openrouter / {llm_model} | "
-                f"Finished after "
-                f"{perf_counter() - started:.1f}s"
+        try:
+            response = requests.post(
+                f"https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=data,
+                timeout=60
             )
 
-            return answer
+            if response.status_code == 200:
+                answer = response.json()["choices"][0]["message"]["content"]
 
-        elif response.status_code == 429:
+                if not isinstance(answer, str) or not answer.strip() or answer.strip() == "[]":
+                    raise ValueError("Empty response")
 
-            wait_time = min(2 ** attempt, 60)
+                print(
+                    f"{'ANSWERING':<9} | {status_label:<10} | "
+                    f"openrouter / {llm_model} | "
+                    f"Finished after "
+                    f"{perf_counter() - started:.1f}s"
+                )
 
-            print(
-                f"429 Rate limit {llm_model}. "
-                f"Retry {attempt+1}/{retries}. "
-                f"Waiting {wait_time:.2f}s"
-            )
+                return answer
 
+            elif response.status_code == 429:
+                print(f"429 Rate limit {llm_model}.")
+
+            else:
+                response.raise_for_status()
+
+        except requests.exceptions.HTTPError:
+            if response.status_code < 500:
+                raise
+            print(f"Server error {response.status_code} for {llm_model}.")
+
+        except (requests.exceptions.RequestException, ValueError, KeyError, IndexError, TypeError) as e:
+            print(f"Error on attempt {attempt + 1}/{retries + 1}: {type(e).__name__}: {e}")
+
+        if attempt < retries:
+            wait_time = min(30 * (2 ** attempt), 60)
+            print(f"Retry {attempt + 1}/{retries}. Waiting {wait_time:.2f}s")
             time.sleep(wait_time)
-
-        else: 
-            response.raise_for_status()
 
     raise RuntimeError(f"openrouter/ {llm_model} failed after {retries} retries")
 
