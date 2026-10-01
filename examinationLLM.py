@@ -268,22 +268,8 @@ def examination(llm_model, examination_data, endpoint):
 
                             stage = "grader"
 
-                            print(
-                                f"{'GRADING':<9} | {question_type:<10} | "
-                                f"{GRADER_ENDPOINT} / {GRADER_LLM} | "
-                                "Checking answer...",
-                                flush=True
-                            )
-                            
+                           
                             point = evaluation_result(question, answer, reference_answer, question_format)
-
-                            print(
-                                f"{'GRADING':<9} | {question_type:<10} | "
-                                f"{GRADER_ENDPOINT} / {GRADER_LLM} | "
-                                "Finished",
-                                flush=True
-                            )
-                            print("\n")
 
                             correct_counter += point
 
@@ -513,7 +499,7 @@ def run_full_exam():
 
 def retry_failed_questions():
 
-    with open(EXAM_DIR / "failed_questions.json") as file:
+    with open(EXAM_DIR / "failed_questions.json", "r", encoding="utf-8") as file:
         failed_questions = json.load(file)
 
     remaining_failed = []
@@ -523,8 +509,8 @@ def retry_failed_questions():
         print(
             f"Retrying {item['model']} | "
             f"{item['culture']} | "
-            f"{item['dimension']}"
-            f"{item['type']} | "
+            f"{item['dimension']} |"
+            f"{item['type']}"
         )
 
         answer = openrouter_student(
@@ -558,27 +544,27 @@ def retry_failed_questions():
             indent=4
         )
 
-def update_exam_results(item, answer, score):
+def update_exam_results(failed_question, answer, score):
 
-    with open(EXAM_DIR / "exam_results.json") as file:
+    with open(EXAM_DIR / "exam_results.json", "r", encoding="utf-8") as file:
         results = json.load(file)
 
-    model = item["model"]
+    model = failed_question["model"]
 
     questions = results[model]["answers"]
 
     for culture in questions:
-        if culture== item["culture"]:
+        if culture== failed_question["culture"]:
 
             for dimension in questions[culture]:
-                if dimension== item["dimension"]:
+                if dimension== failed_question["dimension"]:
                     for qtype in questions[culture][dimension]:
-                        if qtype== item["type"]:
+                        if qtype== failed_question["type"]:
                             print(f"exam_result.json updated ´with: {culture} | {dimension} | {qtype}")
                             questions[culture][dimension][qtype].append({
-                                "question": item["question"],
+                                "question": failed_question["question"],
                                 "llm_answer": answer,
-                                "reference_answer": item["reference_answer"],
+                                "reference_answer": failed_question["reference_answer"],
                                 "score": score,
                             })
 
