@@ -504,8 +504,8 @@ def retry_failed_questions():
 
     remaining_failed = []
 
-    for item in failed_questions:
-
+    for idx, item in enumerate(failed_questions):
+        print(f"Failed question {idx + 1} of {len(failed_questions)}")
         print(
             f"Retrying {item['model']} | "
             f"{item['culture']} | "
