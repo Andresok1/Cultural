@@ -573,6 +573,50 @@ def update_exam_results(failed_question, answer, score):
 
 
 
+def rebuild_metrics():
+    """Rebuild CSVs and overall accuracies from saved answers, without API calls."""
+    with open(EXAM_DIR / "exam_results.json", encoding="utf-8") as file:
+        results = json.load(file)
+
+    results_table = []
+    model_totals = {}
+    for model, result in results.items():
+        model_correct = model_total = 0
+        for culture, dimensions in result["answers"].items():
+            for dimension, question_types in dimensions.items():
+                for qtype, answers in question_types.items():
+                    questions = [answer["question"] for answer in answers]
+                    if len(questions) != len(set(questions)):
+                        raise ValueError(
+                            f"Duplicate questions: {model} / {culture} / {dimension} / {qtype}"
+                        )
+                    scores = [answer["score"] for answer in answers]
+                    if any(score not in (0, 1) for score in scores):
+                        raise ValueError(
+                            f"Invalid scores: {model} / {culture} / {dimension} / {qtype}"
+                        )
+                    correct, total = sum(scores), len(answers)
+                    results_table.append({
+                        "model": model,
+                        "culture": culture,
+                        "dimension": dimension,
+                        "question_type": qtype,
+                        "correct": correct,
+                        "total": total,
+                    })
+                    model_correct += correct
+                    model_total += total
+        result["accuracy"] = model_correct / model_total if model_total else 0
+        model_totals[model] = model_total
+
+    if not results_table:
+        raise ValueError("No answer groups found; metrics were not changed.")
+    df_detail = save_csv(results_table)
+    save_exam_results(results)
+    print_examination_summary(df_detail)
+    return model_totals
+
+
 def main(mode="full"):
 
     if mode == "full":
@@ -584,6 +628,10 @@ def main(mode="full"):
         print_banner("COMPLETING EXAM")
         retry_failed_questions()
 
+    elif mode == "rebuild_metrics":
+        for model, total in rebuild_metrics().items():
+            print(f"{model}: {total} saved answers")
+
     print("\nTo proceed with the charts, execute: python graphics.py")
 
 
@@ -593,7 +641,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--mode",
-        choices=["full", "retry"],
+        choices=["full", "retry", "rebuild_metrics"],
         default="full"
     )
 
