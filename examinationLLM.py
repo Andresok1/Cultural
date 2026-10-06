@@ -378,9 +378,6 @@ GRADER_MODELS = {
     "inference": "granite-4.1:8b-bf16",
 }
 
-STUDENT_ENDPOINT = "openrouter"
-models = STUDENT_MODELS[STUDENT_ENDPOINT]
-
 GRADER_ENDPOINT = "inference"
 GRADER_LLM = GRADER_MODELS[GRADER_ENDPOINT]
 
