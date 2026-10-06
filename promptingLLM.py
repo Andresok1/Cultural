@@ -59,13 +59,12 @@ def PROMPT_KNOWLEDGE(culture, dimension, prompt_texts):
     return user_prompt
 
 
-def openai_create_knowledge(args, text, culture, dimension, language=None):
+def openai_create_knowledge(args, text, culture, dimension, language=None, teacher_model=None):
     """
     Extracts important features and content related to a specific culture using OpenAI API
     from a given text. Returns format: title, original snippet and knowledge extrated from
     the text. Does not invent information if there is insufficient support.
     """
-    openai_model = "gpt-4o-mini"  # Use the model specified in the command-line arguments
 
     if not text:
         print("No documents were given to produce a knowledge entry.")
@@ -87,11 +86,11 @@ def openai_create_knowledge(args, text, culture, dimension, language=None):
         base_url="https://api.openai.com/v1"
     )
 
-    print(f"{language + ' | ' if language else ''}openai / {openai_model} | Sending request...", flush=True)
+    print(f"{language + ' | ' if language else ''}openai / {teacher_model} | Sending request...", flush=True)
     started = perf_counter()
 
     response = client.chat.completions.create(
-        model= openai_model, #OPENAI constant Model
+        model= teacher_model, #OPENAI constant Model
         messages=[
             {
                 "role": "user", 
@@ -101,17 +100,17 @@ def openai_create_knowledge(args, text, culture, dimension, language=None):
     )
 
     content = response.choices[0].message.content
-    print(f"{language + ' | ' if language else ''}openai / {openai_model} | Finished after {perf_counter() - started:.1f}s")
+    print(f"{language + ' | ' if language else ''}openai / {teacher_model} | Finished after {perf_counter() - started:.1f}s")
     return content
 
 
-def interweb_create_knowledge(args, text, culture, dimension, retries = 1, language=None):
+def interweb_create_knowledge(args, text, culture, dimension, retries = 1, language=None, teacher_model=None):
     """
     Extracts important features and content related to a specific culture using Interweb API
     from a given text. Returns format: title, original snippet and knowledge extrated from
     the text. Does not invent information if there is insufficient support.
     """
-    interweb_model= "gpt-4.1-mini"
+
     load_dotenv()
     INTERWEB_API_KEY = os.getenv("INTERWEB_API_KEY")
 
@@ -136,7 +135,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 1, langu
     user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
 
     payload = {
-        "model": interweb_model,  # Replace with the model available
+        "model": teacher_model,  # Replace with the model available
         "messages": [
             {
                 "role": "system",
@@ -150,7 +149,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 1, langu
     }
 
     try:
-        print(f"{language + ' | ' if language else ''}interweb / {interweb_model} | Sending request...", flush=True)
+        print(f"{language + ' | ' if language else ''}interweb / {teacher_model} | Sending request...", flush=True)
         started = perf_counter()
         response = requests.post(
             f"https://interweb.l3s.uni-hannover.de/v1/chat/completions",
@@ -193,7 +192,7 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 1, langu
 
             return None
 
-        print(f"{language + ' | ' if language else ''}interweb / {interweb_model} | Finished after {perf_counter() - started:.1f}s")
+        print(f"{language + ' | ' if language else ''}interweb / {teacher_model} | Finished after {perf_counter() - started:.1f}s")
         return answer
     
     except requests.exceptions.RequestException as e:
@@ -211,9 +210,8 @@ def interweb_create_knowledge(args, text, culture, dimension, retries = 1, langu
 
         return None
 
-def openrouter_create_knowledge(args, text, culture, dimension, retries=5, language=None):
+def openrouter_create_knowledge(args, text, culture, dimension, retries=5, language=None, teacher_model=None):
 
-    openrouter_model = "openai/gpt-4o"
     load_dotenv()
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
@@ -239,7 +237,7 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5, langu
     user_prompt = PROMPT_KNOWLEDGE(culture, dimension, prompt_texts)
 
     data = {
-        "model": f"{openrouter_model}",
+        "model": f"{teacher_model}",
         "messages": [
             {
                 "role": "system",
@@ -252,7 +250,7 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5, langu
         ]
     }
 
-    print(f"{language + ' | ' if language else ''}openrouter / {openrouter_model} | Sending request...", flush=True)
+    print(f"{language + ' | ' if language else ''}openrouter / {teacher_model} | Sending request...", flush=True)
     started = perf_counter()
     response = requests.post(
         f"{url}/api/v1/chat/completions",
@@ -269,7 +267,7 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5, langu
     # print(response_json)
 
     answer = response.json()["choices"][0]["message"]["content"]
-    print(f"{language + ' | ' if language else ''}openrouter / {openrouter_model} | Finished after {perf_counter() - started:.1f}s")
+    print(f"{language + ' | ' if language else ''}openrouter / {teacher_model} | Finished after {perf_counter() - started:.1f}s")
 
     if not answer or not answer.strip():
         print("WARNING: Empty answer from OpenRouter")
@@ -279,8 +277,7 @@ def openrouter_create_knowledge(args, text, culture, dimension, retries=5, langu
     return answer
 
 
-def inference_create_knowledge(args, text=None, culture=None, dimension=None, retries=2, language=None):
-    inference_model = "granite-4.1:8b-bf16"
+def inference_create_knowledge(args, text=None, culture=None, dimension=None, retries=2, language=None, teacher_model=None):
 
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
@@ -310,7 +307,7 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
 
             print(
                 f"{language + ' | ' if language else ''}"
-                f"inference / {inference_model} | "
+                f"inference / {teacher_model} | "
                 f"Sending request "
                 f"(attempt {attempt + 1}/{retries + 1})...",
                 flush=True
@@ -319,7 +316,7 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
             started = perf_counter()
 
             response = client.chat.completions.create(
-                model=inference_model,
+                model=teacher_model,
                 messages=[
                     {
                         "role": "system",
@@ -336,7 +333,7 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
 
             print(
                 f"{language + ' | ' if language else ''}"
-                f"inference / {inference_model} | "
+                f"inference / {teacher_model} | "
                 f"Finished after "
                 f"{perf_counter() - started:.1f}s"
             )
