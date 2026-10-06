@@ -28,7 +28,7 @@ def plot_model_culture_accuracy(df_final):
         "LLM performance across cultures"
     )
 
-    plt.ylim(0,1)
+    plt.ylim(0.4,1)
 
     plt.tight_layout()
 
@@ -62,7 +62,7 @@ def plot_model_questiontype_accuracy(df_final):
     plt.ylabel("Accuracy")
     plt.xlabel("Question type")
 
-    plt.ylim(0,1)
+    plt.ylim(0.4,1)
 
     plt.xticks(rotation=30)
 
@@ -188,7 +188,7 @@ def plot_model_culture_dimension(df_dimension):
     plt.title("Performance across cultural categories")
 
 
-    plt.ylim(0,1)
+    plt.ylim(0.4,1)
 
     plt.xticks(rotation=45)
 
