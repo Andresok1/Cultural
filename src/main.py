@@ -1,8 +1,8 @@
 from promptingLLM import openrouter_testing
 from result_paths import RESULTS_DIR, KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR
-from dimension_summary import print_experiment_summary
 from datetime import datetime
-from duckDuckGo import fetch_raw_results
+from web_retrieval import fetch_raw_results
+from utils import print_experiment_summary
 from knowledgeGen import knowledge_level_manager, translate
 from pathlib import Path
 
@@ -29,9 +29,9 @@ class TerminalCapture:
         self.terminal.flush()
         self.document.flush()
 
-def setup_experiment_output():
+def setup_experiment_output(clear_previous=True):
     # Remove the previous run's reports before creating the new ones.
-    for pattern in ("experiment_summary_*.txt", "terminal_output_*.txt"):
+    for pattern in ("experiment_summary_*.txt", "terminal_output_*.txt") if clear_previous else ():
         for file_path in RESULTS_DIR.glob(pattern):
             if file_path.is_file():
                 file_path.unlink()
@@ -72,12 +72,6 @@ def positive_integer(value):
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument(
-    "--knowledge_level",
-    choices=["atomic", "collective"],
-    default="atomic",
-    help="Each document received their own knowledge  (atomic) or all documents are considered together for one knowledge (collective).",
-)
 
 parser.add_argument(
     "--batch_size",
@@ -86,12 +80,6 @@ parser.add_argument(
     help="Documents per collective batch; all valid documents are processed."
 )
 
-parser.add_argument(
-    "--max_results",
-    type=int,
-    default=5,
-    help="Legacy atomic-mode count check; ignored in collective mode. Use --batch_size for collective batches.",
-)
 
 parser.add_argument(
     "--question_language",
@@ -103,7 +91,7 @@ parser.add_argument(
 parser.add_argument(
     "--api",
     choices=["openai", "interweb", "openrouter", "inference"],
-    default="interweb",
+    default="inference",
     help="API which is going to be used for knowledge and questions creation",
 )
 
@@ -116,26 +104,17 @@ parser.add_argument(
 
 parser.add_argument(
     "--question_type",
-    choices=["factual", "conceptual", "misleading", "multihop", "random", "all"],
-    default="factual", 
+    choices=["factual", "conceptual", "misleading", "long_form", "random", "all"],
+    default="all", 
     help="Which kind of question's type is created",
 )
 
 parser.add_argument(
-    "--failed",
-    choices=["yes", "no"],
-    default="no", 
-    help="if the failed dimensions are going to be re-run",
+    "--mode",
+    choices=["full", "retry", "single"],
+    default="full",
+    help="Run the normal process, retry the dimensions in emptyKnowledge.json, or test selected cultures and dimensions.",
 )
-
-args = parser.parse_args()
-
-
-#Result folder cleaning before starting the process
-for results_folder in (KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR):
-    for file_path in results_folder.iterdir():
-        if file_path.is_file():
-            file_path.unlink()
 
 culture_language = {
     "Colombian": "spanish",
@@ -143,10 +122,7 @@ culture_language = {
     "Italian": "italian",
 }
 
-# print(f"# dimensions to compute: {len(dimensions)} (starting at {dimension_start}/{len(all_dimensions)})")
-
-
-def cultural_exam(cultures_dimensions):
+def cultural_exam(cultures_dimensions, teacher_model=None):
 
     for culture, dimensions in cultures_dimensions.items():
     # for culture in cultures:
@@ -190,10 +166,109 @@ def cultural_exam(cultures_dimensions):
             # Finish knowledge and questions before retrieving the next dimension.
             knowledge_level_manager(
                 args, timestamp, {key: all_results[key]}, culture_dfs,
-                summary_path=summary_path, experiment_counts=experiment_counts[culture],
+                summary_path=summary_path, experiment_counts=experiment_counts[culture], teacher_model=teacher_model
             )
 
     print("All Done!")
+
+    for culture, counts in experiment_counts.items():
+        print_experiment_summary(counts, summary_path, culture=culture)
+    print(f"Summary saved to: {summary_path}")
+    print(f"Terminal output saved to: {terminal_output_path}")
+
+TEACHER_MODELS = {
+    "openai": "gpt-4o",
+    "interweb": "gpt-4.1-mini",
+    "openrouter": "qwen/qwen3.8-max-0902",
+    "inference": "gpt-oss:120b-mxfp4",
+}
+
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+
+    culs_dims = {}
+
+    if args.mode == "retry":
+        dimension_start = 0
+        # Read the failed dimensions before the result folders are cleaned.
+        empty_knowledge_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
+        if not empty_knowledge_path.exists():
+            print(f"No retry report found: {empty_knowledge_path}")
+            sys.exit(0)
+
+        with empty_knowledge_path.open("r", encoding="utf-8") as f:
+            failed_dimensions = json.load(f)
+
+        if not failed_dimensions:
+            print("No failed dimensions to retry.")
+            sys.exit(0)
+
+        for item in failed_dimensions:
+            culture = item["culture"]
+            dimension = item["dimension"]
+            if culture not in culs_dims:
+                culs_dims[culture] = []
+            culs_dims[culture].append(dimension)
+
+    elif args.mode == "single":
+        dimension_start = 0
+        # Edit these lists to choose what to test.
+        cultures = ["Colombian"]
+        dimensions = [
+            # "stereotypes",
+            "authority"
+        ]
+        for culture in cultures:
+            culs_dims[culture] = dimensions.copy()
+
+    else:
+        csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
+        df = pd.read_csv(csv_path)
+        dimensions = df["Fine-grained Dimension"].tolist()
+        dimension_start = 139
+
+        cultures = [
+            "Colombian",
+            "German",
+            "Italian",
+        ]
+
+        for cul in cultures:
+            culs_dims[cul] = dimensions.copy()
+
+    # Retry completes the saved run without deleting its results.
+    if args.mode != "retry":
+        for results_folder in (KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR):
+            for file_path in results_folder.iterdir():
+                if file_path.is_file():
+                    file_path.unlink()
+
+    experiment_counts = {
+        culture: {"complete": 0, "incomplete": 0}
+        for culture in culs_dims.keys()
+    }
+    all_results = {}
+    culture_dfs = {}
+
+    if args.mode == "retry":
+        query_results_path = KNOWLEDGE_DIR / "query_results.json"
+        if query_results_path.exists():
+            with query_results_path.open("r", encoding="utf-8") as f:
+                all_results = json.load(f)
+        for culture in culs_dims:
+            csv_path = QUESTIONS_DIR / f"{culture}_Knowledge_QA.csv"
+            if csv_path.exists():
+                culture_dfs[culture] = [pd.read_csv(csv_path)]
+
+    summary_path, terminal_output_path = setup_experiment_output(clear_previous=args.mode != "retry")
+
+    print(f"Experiment setup ({args.mode}):")
+    for culture, dimensions in culs_dims.items():
+        print(f"{culture}: {len(dimensions)} dimensions")
+
+    timestamp = datetime.now().strftime("%m%d_%H%M")
+    cultural_exam(culs_dims, teacher_model=TEACHER_MODELS[args.api])
 
     empty_knowledge_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
     if empty_knowledge_path.exists():
@@ -201,82 +276,3 @@ def cultural_exam(cultures_dimensions):
             empty_knowledge = json.load(f)
         if empty_knowledge:
             print("\nemptyKnowledge is not empty. Check results/knowledge/emptyKnowledge.json.")
-
-    for culture, counts in experiment_counts.items():
-        print_experiment_summary(counts, summary_path, culture=culture)
-    print(f"Summary saved to: {summary_path}")
-    print(f"Terminal output saved to: {terminal_output_path}")
-
-
-
-REST = [
-  {
-    "culture": "Colombian",
-    "dimension": "authority"
-  },
-  
-  {
-    "culture": "German",
-    "dimension": "authority"
-  },
-  {
-    "culture": "Italian",
-    "dimension": "authority"
-  }
-]
-
-
-
-culs_dims = {}
-
-if args.failed == "yes":
-  dimension_start = 0
-  
-  for item in REST:
-      culture = item["culture"]
-      dimension = item["dimension"]
-
-      if culture not in culs_dims:
-          culs_dims[culture] = []
-
-      culs_dims[culture].append(dimension)
-    
-
-else: 
-
-  csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
-  df = pd.read_csv(csv_path)
-  dimensions = df["Fine-grained Dimension"].tolist()
-  dimension_start = 139
-
-  cultures= [
-      "Colombian",
-    #   "German",
-    #   "Italian",
-  ]
-
-  for cul in cultures:
-    for dim in dimensions:
-      if cul not in culs_dims:
-          culs_dims[cul] = []
-
-      culs_dims[cul].append(dim)
-
-
-experiment_counts = {
-    culture: {"complete": 0, "incomplete": 0}
-    for culture in culs_dims.keys()
-}
-
-all_results = {}
-culture_dfs = {}
-
-summary_path, terminal_output_path = setup_experiment_output()
-
-print("Experiment setup:")
-for culture, dimensions in culs_dims.items():
-    print(f"{culture}: {len(dimensions)} dimensions")
-
-timestamp = datetime.now().strftime("%m%d_%H%M")
-
-cultural_exam(culs_dims)
