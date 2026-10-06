@@ -16,7 +16,7 @@ QUESTION_TYPES = {
     "factual": "Based on the context, think through all relevant cultural points step by step and generate a factual question. The question type can include single-choice, true/false, or fill-in-the-blank. Ensure that the question stem is clear, the options are plausible but misleading (distractors), and the answer is accurate.",
     "conceptual": "Based on the context, think through all relevant cultural points step by step and generate a conceptual explanation question. The question should focus on the learner’s understanding of the concepts, structures, or values inside cultural phenomena, rather than simple memorization. Suitable formats include multiple-choice or true/false questions. Ensure the question is thought-provoking and the answer is well-justified.",
     "misleading": "Based on the context, think through all relevant cultural points step by step and generate a misleading question to assess whether learners can identify cultural misunderstandings, stereotypes, or biases. The question should focus on learners’ critical thinking about culture, identifying which statements or Behaviors reflect misunderstandings, oversimplifications, biases, or stereotypes, and guide them toward more accurate or respectful understandings. Possible formats include multiple-choice, true/false, case analysis, or short-answer questions.",
-    "multihop": "Based on the context, think through all relevant cultural points step by step and generate a multi-hop reasoning question to assess whether the learner can synthesize multiple cultural elements and understand the deeper logic or internal connections among cultural phenomena. The question should prompt learners to start from multiple information points, integrate cultural knowledge, and perform logical analysis, comparison, or generalization. Scenario-based, integrated analysis, or comparative reasoning questions are recommended."
+    "long_form": "Based on the context, think through all relevant cultural points step by step and generate a multi-hop reasoning question to assess whether the learner can synthesize multiple cultural elements and understand the deeper logic or internal connections among cultural phenomena. The question should prompt learners to start from multiple information points, integrate cultural knowledge, and perform logical analysis, comparison, or generalization. Scenario-based, integrated analysis, or comparative reasoning questions are recommended."
 }
 
 ROLE_QUESTION = """
@@ -146,7 +146,7 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
                 "short_answer"
             ],
 
-        "multihop": 
+        "long_form": 
             [
                 "long_answer"
             ],
@@ -445,8 +445,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
 
 
 
-def inference_create_question(args, text, question_type, culture, dimension, question_language, retries=2, language=None):
-    inference_model = "granite-4.1:8b-bf16"
+def inference_create_question(args, text, question_type, culture, dimension, question_language, retries=2, language=None, teacher_model=None):
 
     load_dotenv()
     INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY")
@@ -475,12 +474,12 @@ def inference_create_question(args, text, question_type, culture, dimension, que
     for attempt in range(retries + 1):
         try:
 
-            print(f"Question |{language + ' | ' if language else ''}inference / {inference_model} | Sending request...", flush=True)
+            print(f"Question |{language + ' | ' if language else ''}inference / {teacher_model} | Sending request...", flush=True)
 
             started = perf_counter()
 
             response = client.chat.completions.create(
-                model=inference_model,
+                model=teacher_model,
                 response_format={"type":"json_object"},
                 messages=[
                     {
@@ -496,7 +495,7 @@ def inference_create_question(args, text, question_type, culture, dimension, que
 
             answer = response.choices[0].message.content
 
-            print(f"Question |{language + ' | ' if language else ''}inference / {inference_model} | Finished after {perf_counter() - started:.1f}s")
+            print(f"Question |{language + ' | ' if language else ''}inference / {teacher_model} | Finished after {perf_counter() - started:.1f}s")
 
             if (
                 answer is None
@@ -615,7 +614,7 @@ def knowledge_preparing(args, culture, dimension, knowledge_output_dict):
 
     return knowledge_list, title_list, snippet_list
 
-def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
+def knowledge_to_question(args, culture, dimension, knowledge_list, typ, teacher_model=None):
     '''This function separates title, snippet and knowledge from the knowledge_path and clean them. and separates them into lists to better visualization and data control to create a question.
     It gives knowledge_list, title_list and snippet_list scaning the knowledge_path.
     Returns the question text, options, reference answer, and selected format.
@@ -626,7 +625,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
     elif args.api == "openrouter":
         result = openrouter_create_question(args, text=knowledge_list, question_type=typ, culture=culture,dimension=dimension, question_language=args.question_language)
     elif args.api == "inference":
-        result = inference_create_question(args, text=knowledge_list, question_type=typ, culture=culture, dimension=dimension, question_language=args.question_language)
+        result = inference_create_question(args, text=knowledge_list, question_type=typ, culture=culture, dimension=dimension, question_language=args.question_language, teacher_model=teacher_model)
     elif args.api == "interweb":
         result = interweb_create_question(args, text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language, dimension=dimension)
     else:
@@ -703,7 +702,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ):
 
 
 
-def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict):
+def question_creation(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict, teacher_model=None):
     '''This function prepares the question data to deliver it in `.csv` format and save it in the `results` folder.
     return:
         Counts of requested and successfully generated questions.
@@ -717,7 +716,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
         return question_counts
 
     if args.question_type == "all":
-        types = ["factual", "conceptual", "misleading", "multihop"]
+        types = ["factual", "conceptual", "misleading", "long_form"]
     else: 
         types = [args.question_type]
 
@@ -729,8 +728,12 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
         question_vector = {}
 
     for typ in types:
+        if getattr(args, "mode", None) == "retry" and question_vector.get(culture, {}).get(dimension, {}).get(typ):
+            # Keep successful questions and generate only missing types.
+            question_counts += 1
+            continue
         question, abcd_options, reference_answer, selected_format = knowledge_to_question(
-            args, culture, dimension, knowledge_list=knowledge_list, typ=typ
+            args, culture, dimension, knowledge_list=knowledge_list, typ=typ, teacher_model=teacher_model
         )
 
         question_text = question.strip().upper() if isinstance(question, str) else ""
@@ -773,7 +776,7 @@ def csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output
                 json.dump(question_vector, f, ensure_ascii=False, indent=2)
 
 
-        output_path = KNOWLEDGE_DIR / f"knowledge_output_{timestamp}.json"
+        output_path = KNOWLEDGE_DIR / f"knowledge_output.json"
 
         if os.path.exists(output_path):
             with open(output_path, "r", encoding="utf-8") as f:
