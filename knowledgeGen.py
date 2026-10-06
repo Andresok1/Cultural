@@ -3,11 +3,11 @@ import json
 import os
 from contextlib import redirect_stdout
 from io import StringIO
-from dimension_summary import extraction_entries, print_dimension_summary, coverage_threshold, write_summary
-from questionGen import csv_saver
-from utils import update_empty_knowledge_report
+from questionGen import question_creation
+from utils import update_empty_knowledge_report, extraction_entries, print_dimension_summary, coverage_threshold, write_summary
 from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge, inference_create_knowledge
 from deep_translator import MyMemoryTranslator
+from call_llm import call_llm
 
 def translate(text, target_lang):
     try:
@@ -23,7 +23,7 @@ def translate(text, target_lang):
 
 
 def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
-                            summary_path=None, experiment_counts=None):
+                            summary_path=None, experiment_counts=None, teacher_model=None):
     """
     It manages between atomic and collective to organize knowledge generation.
     Pass a shared culture_dfs to retain CSV rows across dimension-level calls.
@@ -58,7 +58,7 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
         if culture not in culture_dfs:
             culture_dfs[culture] = []
 
-        output_path = KNOWLEDGE_DIR / "knowledge_output.json"
+        output_path = KNOWLEDGE_DIR / "knowledge_output_raw.json"
         input_path = KNOWLEDGE_DIR / "knowledge_input.json"
 
         if os.path.exists(output_path): #Update for knowledge_output
@@ -92,70 +92,72 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
             print(f"- {lang}: {len(data.get('ranking', []))}")
         total = sum(len(data.get("ranking", [])) for data in languages.values())
         print(f"--------TOTAL: {total} --------\n")
-        if args.knowledge_level == "collective":
+
 # collective:
-            print(f"Knowledge | {culture} | {dimension}")
-            if args.batch_size <= 0:
-                raise ValueError("batch_size must be positive")
+        print(f"Knowledge | {culture} | {dimension}")
+        if args.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
 
-            for lang, data in languages.items():
-                ranking = data.get("ranking", [])
-                valid_contents = []
-                for document in ranking:
-                    if isinstance(document, dict):
-                        content = document.get("text")
-                    else:
-                        content = document
+        for lang, data in languages.items():
+            ranking = data.get("ranking", [])
+            valid_contents = []
+            for document in ranking:
+                if isinstance(document, dict):
+                    content = document.get("text")
+                else:
+                    content = document
 
-                    if content:
-                        valid_contents.append(document)
-                language_entries = []
-                total_batches = (len(valid_contents) + args.batch_size - 1) // args.batch_size  #upper bound division for total number of batches
+                if content:
+                    valid_contents.append(document)
+            language_entries = []
+            total_batches = (len(valid_contents) + args.batch_size - 1) // args.batch_size  #upper bound division for total number of batches
 
-                for offset in range(0, len(valid_contents), args.batch_size):
-                    knowledge_input_cache = valid_contents[offset:offset + args.batch_size] #batch slider
-                    prompt_texts = [document["text"] if isinstance(document, dict) else document
-                                    for document in knowledge_input_cache]
-                    batch_label = f"{lang} | Batch {offset // args.batch_size + 1}/{total_batches} | docs: {len(knowledge_input_cache)}"
+            for offset in range(0, len(valid_contents), args.batch_size):
+                knowledge_input_cache = valid_contents[offset:offset + args.batch_size] #batch slider
+                prompt_texts = [document["text"] if isinstance(document, dict) else document
+                                for document in knowledge_input_cache]
+                batch_label = f"{lang} | Batch {offset // args.batch_size + 1}/{total_batches} | docs: {len(knowledge_input_cache)}"
 
-                    if args.api == "openai":
-                        knowledge_text = openai_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
-                    elif args.api == "openrouter":
-                        knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
-                    elif args.api == "inference":
-                        knowledge_text = inference_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
-                    else:
-                        knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
+                if args.api == "openai":
+                    knowledge_text = openai_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
+                elif args.api == "openrouter":
+                    knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
+                elif args.api == "inference":
+                    knowledge_text = inference_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
+                elif args.api == "all":
+                    knowledge_text = call_llm(args, endpoint= args.api,text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
+                else:
+                    knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
 
-                    valid_entries, valid_response, response_status = extraction_entries(
-                        knowledge_text,
-                        json_cleanig,
+                valid_entries, valid_response, response_status = extraction_entries(
+                    knowledge_text,
+                    json_cleanig,
+                )
+
+                language_entries.extend(valid_entries)
+                
+                stats[lang]["entries"] += len(valid_entries)
+
+                if valid_response:
+                    stats[lang]["processed"] += len(knowledge_input_cache)
+                    print(
+                        f"{batch_label} | Status: {response_status} | "
+                        f"Knowledge entries: {len(valid_entries)}"
+                    )
+                else:
+                    stats[lang]["invalid"] += 1
+                    print(
+                        f"{batch_label} | Invalid response: {response_status}; "
+                        "documents not counted as processed"
                     )
 
-                    language_entries.extend(valid_entries)
-                    
-                    stats[lang]["entries"] += len(valid_entries)
-
-                    if valid_response:
-                        stats[lang]["processed"] += len(knowledge_input_cache)
-                        print(
-                            f"{batch_label} | Status: {response_status} | "
-                            f"Knowledge entries: {len(valid_entries)}"
-                        )
-                    else:
-                        stats[lang]["invalid"] += 1
-                        print(
-                            f"{batch_label} | Invalid response: {response_status}; "
-                            "documents not counted as processed"
-                        )
-
-                knowledge_text_cleaned = json.dumps(language_entries, ensure_ascii=False)
-                knowledge_output.append(knowledge_text_cleaned)
-                knowledge_output_dicc[lang] = knowledge_text_cleaned
-                knowledge_input.append(valid_contents)
-                knowledge_input_dicc[lang] = valid_contents
-                count += len(valid_contents)
-                print()
+            knowledge_text_cleaned = json.dumps(language_entries, ensure_ascii=False)
+            knowledge_output.append(knowledge_text_cleaned)
+            knowledge_output_dicc[lang] = knowledge_text_cleaned
+            knowledge_input.append(valid_contents)
+            knowledge_input_dicc[lang] = valid_contents
+            count += len(valid_contents)
+            print()
 
         if culture not in knowledge_output_dict:
             knowledge_output_dict[culture] = {}
@@ -179,7 +181,7 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
 
         valid_process = coverage_threshold(stats)
         if valid_process == True:
-            question_counts = csv_saver(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict)
+            question_counts = question_creation(args, dimension, culture, timestamp, culture_dfs, knowledge_output_dict, teacher_model=teacher_model)
         else:
             update_empty_knowledge_report(culture, dimension)
 
@@ -193,6 +195,18 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
             
         if experiment_counts is not None:
             experiment_counts["complete" if complete else "incomplete"] += 1
+
+        if getattr(args, "mode", None) == "retry" and complete:
+            report_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
+            if report_path.exists():
+                with report_path.open("r", encoding="utf-8") as f:
+                    failed_dimensions = json.load(f)
+                failed_dimensions = [
+                    item for item in failed_dimensions
+                    if (item["culture"], item["dimension"]) != (culture, dimension)
+                ]
+                with report_path.open("w", encoding="utf-8") as f:
+                    json.dump(failed_dimensions, f, ensure_ascii=False, indent=2)
 
 
     return knowledge_output

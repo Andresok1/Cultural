@@ -626,6 +626,7 @@ def main(mode="full"):
         retry_failed_questions()
 
     elif mode == "rebuild_metrics":
+        setup_examination_output()
         for model, total in rebuild_metrics().items():
             print(f"{model}: {total} saved answers")
 
