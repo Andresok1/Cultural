@@ -226,7 +226,7 @@ if __name__ == "__main__":
         csv_path = BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
         df = pd.read_csv(csv_path)
         dimensions = df["Fine-grained Dimension"].tolist()
-        dimension_start = 139
+        dimension_start = 0 #from 0 to 139
 
         cultures = [
             "Colombian",
