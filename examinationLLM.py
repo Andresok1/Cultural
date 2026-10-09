@@ -138,8 +138,8 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
     flush=True
     )
 
-    if llm_answer is None:
-        return "No answer"
+    if not isinstance(llm_answer, str) or not llm_answer.strip():
+        raise RuntimeError("Student returned no answer")
     
     elif question_type == "single_choice":
         if normalize_answer(llm_answer) == normalize_answer(reference_answer):
@@ -159,13 +159,18 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
         else:
             raise ValueError(f"Unknown grader endpoint: {GRADER_ENDPOINT}")
         
-        if result is None:
-            raise RuntimeError("Grader returned no answer")
+        if not isinstance(result, str) or result.strip() not in ("PASS", "FAIL"):
+            raise RuntimeError("Grader returned no valid score")
+
+        result = result.strip()
 
         if result == "PASS":
             point += 1
 
     
+    else:
+        raise ValueError(f"Unsupported question format: {question_type}")
+
     print(
         f"{'GRADING':<9} | {question_type:<10} | "
         f"{GRADER_ENDPOINT} / {GRADER_LLM} | "
@@ -176,7 +181,7 @@ def evaluation_result(question, llm_answer, reference_answer, question_type):
 
     return point
 
-def load_questions():   
+def load_questions():
     question_path = QUESTIONS_DIR / "questions.json"
 
     with open(question_path, "r", encoding="utf-8") as file:
@@ -185,6 +190,104 @@ def load_questions():
     for culture, dimensions in data.items():
         print(f"{culture}: {len(dimensions)} dimensions")
     return data
+
+
+def validate_question_dataset(data):
+    """Infer expected types from the dimension with the most populated types."""
+    dimensions = [
+        (culture, dimension, types)
+        for culture, culture_dimensions in data.items()
+        for dimension, types in culture_dimensions.items()
+    ]
+    question_types = sorted({
+        qtype for _, _, types in dimensions for qtype in types
+    })
+    print("\nQUESTION COUNTS BEFORE EXAMINATION")
+    print(" | ".join(["Culture", "Dimensions", *question_types, "Total"]))
+    for culture, culture_dimensions in data.items():
+        counts = {
+            qtype: sum(len(types.get(qtype, []))
+                       for types in culture_dimensions.values())
+            for qtype in question_types
+        }
+        print(" | ".join([culture, str(len(culture_dimensions)),
+                          *(str(counts[qtype]) for qtype in question_types),
+                          str(sum(counts.values()))]))
+
+    if not dimensions:
+        print("Question dataset is empty.")
+        return False
+
+    culture, dimension, reference = max(
+        dimensions, key=lambda item: sum(bool(questions) for questions in item[2].values())
+    )
+    expected = {qtype for qtype, questions in reference.items() if questions}
+    print(f"\nReference dimension: {culture} | {dimension}")
+    print(f"Expected question types: {', '.join(sorted(expected)) or 'none'}")
+    valid = bool(expected)
+    for culture, dimension, types in dimensions:
+        present = {qtype for qtype, questions in types.items() if questions}
+        missing = expected - present
+        unexpected = present - expected
+        if missing:
+            print(f"{culture} | {dimension} | Missing: {', '.join(sorted(missing))}")
+            valid = False
+        if unexpected:
+            print(f"{culture} | {dimension} | Unexpected types: {', '.join(sorted(unexpected))}")
+            valid = False
+    if not valid:
+        print("Question dataset incomplete or inconsistent. Complete question generation before examination.")
+    return valid
+
+
+def student_answer(endpoint, model, question, options, question_format,
+                   culture, dimension, question_type):
+    if endpoint == "inference":
+        return inference_student(model, question, options, question_format,
+                                 culture, dimension, status_label=question_type)
+    if endpoint == "openai":
+        return openai_student(model, question, options, question_format,
+                              culture, dimension, status_label=question_type)
+    if endpoint == "openrouter":
+        return openrouter_student(model, question, options, question_format,
+                                 status_label=question_type)
+    if endpoint == "interweb":
+        return interweb_student(model, question, options, question_format)
+    raise ValueError(f"Unknown student endpoint: {endpoint}")
+
+
+def examination_complete(results, data):
+    """Require exactly one answered, scored response to every expected question."""
+    complete = bool(results) and bool(data)
+    expected_models = {model for models in STUDENT_MODELS.values() for model in models}
+    if expected_models - results.keys():
+        print(f"Missing student models: {sorted(expected_models - results.keys())}")
+        complete = False
+    expected = {
+        (culture, dimension, qtype, item["question"], item["reference_answer"])
+        for culture, dimensions in data.items()
+        for dimension, types in dimensions.items()
+        for qtype, items in types.items()
+        for item in items
+    }
+    for model, result in results.items():
+        actual = []
+        for culture, dimensions in result["answers"].items():
+            for dimension, types in dimensions.items():
+                for qtype, answers in types.items():
+                    for answer in answers:
+                        if (answer.get("score") not in (0, 1)
+                                or not isinstance(answer.get("llm_answer"), str)
+                                or not answer["llm_answer"].strip()):
+                            complete = False
+                        actual.append((culture, dimension, qtype, answer["question"],
+                                       answer["reference_answer"]))
+        if set(actual) != expected or len(actual) != len(expected):
+            print(f"{model}: incomplete question set or duplicate responses")
+            complete = False
+    if not complete:
+        print("Examination incomplete. Retry pending questions before comparing models.")
+    return complete
 
 def examination(llm_model, examination_data, endpoint):
     answers = {}
@@ -222,55 +325,21 @@ def examination(llm_model, examination_data, endpoint):
                     options = question_data.get("options")
                     reference_answer = question_data["reference_answer"]
 
-                    stage = "student"
-                    try: 
-                        if endpoint == "inference":
-                            answer = inference_student(
-                                llm_model, 
-                                question, 
-                                options,
-                                question_format, 
-                                culture,
-                                dimension,
-                                status_label=question_type
-                            )
-                        elif endpoint == "openai":
-                            answer = openai_student(
-                                llm_model, 
-                                question, 
-                                options,
-                                question_format, 
-                                culture,
-                                dimension,
-                                status_label=question_type
-                            )
-                        elif endpoint == "openrouter":
-                            answer = openrouter_student(
-                                llm_model, 
-                                question, 
-                                options,
-                                question_format,
-                                status_label=question_type
-                            )
-                        elif endpoint == "interweb":
-                            answer = interweb_student(
-                                llm_model, 
-                                question, 
-                                options,
-                                question_format
-                            )
+                    try:
+                        answer = student_answer(
+                            endpoint, llm_model, question, options, question_format,
+                            culture, dimension, question_type
+                        )
 
-                        metrics[culture][dimension][question_type]["total"] += 1    #A None answer is still being a response, so it has to be counted in the total.
-
-                        if answer is not None: 
+                        if isinstance(answer, str) and answer.strip(): 
 
                             answer = answer.strip()
 
-                            stage = "grader"
 
                            
                             point = evaluation_result(question, answer, reference_answer, question_format)
 
+                            metrics[culture][dimension][question_type]["total"] += 1
                             correct_counter += point
 
                             answers[culture][dimension][question_type].append({
@@ -285,6 +354,7 @@ def examination(llm_model, examination_data, endpoint):
                         else:
                             failed_question = {
                                 "model": llm_model,
+                                "endpoint": endpoint,
                                 "culture": culture,
                                 "dimension": dimension,
                                 "type": question_type,
@@ -297,14 +367,10 @@ def examination(llm_model, examination_data, endpoint):
                                 failed_questions.append(failed_question)
 
                     except Exception as e:
-                        
-                        print(
-                            f"FAILED during {stage}: "
-                            f"{type(e).__name__}: {e}"
-                        )
-
+                        print(f"FAILED: {type(e).__name__}: {e}")
                         failed_question = {
                             "model": llm_model,
+                            "endpoint": endpoint,
                             "culture": culture,
                             "dimension": dimension,
                             "type": question_type,
@@ -315,8 +381,6 @@ def examination(llm_model, examination_data, endpoint):
                         }
                         if failed_question not in failed_questions:
                             failed_questions.append(failed_question)
-
-                        answer = None
 
     questions_size = sum(
         metrics[c][d][q]["total"]
@@ -348,28 +412,31 @@ def examination(llm_model, examination_data, endpoint):
 
 
 STUDENT_MODELS = {
-    "openai": [
-        "gpt-4.1-mini",
-        "gpt-4o",
-    ],
+    # "openai": [
+    #     "gpt-4.1-mini",
+    #     "gpt-4o",
+    # ],
 
-    "interweb": [
-        "gpt-4.1-mini",
-        "gpt-4o",
-    ],
+    # "interweb": [
+    #     "gpt-4.1-mini",
+    #     "gpt-4o",
+    # ],
 
-    "openrouter": [
-        "qwen/qwen3.5-9b",
-        "nvidia/nemotron-3-ultra-550b-a55b:free",
-        "cohere/north-mini-code:free",
-        "liquid/lfm-2.5-2.6b:free",
-    ],
+    # "openrouter": [
+    #     "qwen/qwen3.5-9b",
+        # "nvidia/nemotron-3-ultra-550b-a55b:free",
+        # "cohere/north-mini-code:free",
+        # "liquid/lfm-2.5-2.6b:free",
+    # ],
 
     "inference": [
         "granite-4.1:8b-bf16",
         "gemma3:4b-f16",
+        "apertus:8b-2509-it-bf16",
+        "qwen3-vl:8b",
     ],
 }
+
 
 GRADER_MODELS = {
     "openai": "gpt-4o",
@@ -438,10 +505,12 @@ def save_csv(results_table):
 
 def run_full_exam():
 
+    data = load_questions()
+    if not validate_question_dataset(data):
+        raise SystemExit("Examination stopped; existing examination results were preserved.")
+
     clear_exam_directory()
     setup_examination_output()
-
-    data= load_questions()
 
     results_table = []
     failed_questions = []
@@ -491,7 +560,8 @@ def run_full_exam():
     save_exam_results(examination_results)
     save_failed_questions(failed_questions)
     df_detail = save_csv(results_table)
-    print_examination_summary(df_detail)
+    if examination_complete(examination_results, data):
+        print_examination_summary(df_detail)
 
 
 def retry_failed_questions():
@@ -510,36 +580,33 @@ def retry_failed_questions():
             f"{item['type']}"
         )
 
-        answer = openrouter_student(
-            item["model"],
-            item["question"],
-            item["options"],
-            item["format"]
-        )
-
-        if answer is not None:
-
+        try:
+            endpoint = item.get("endpoint")
+            if endpoint is None:
+                # Compatibility with retry entries saved before endpoints were recorded.
+                endpoints = [name for name, models in STUDENT_MODELS.items()
+                             if item["model"] in models]
+                if len(endpoints) != 1:
+                    raise ValueError("Cannot determine original endpoint for this model")
+                endpoint = endpoints[0]
+            answer = student_answer(
+                endpoint, item["model"], item["question"], item["options"],
+                item["format"], item["culture"], item["dimension"], item["type"]
+            )
             score = evaluation_result(
-                item["question"],
-                answer,
-                item["reference_answer"],
-                item["format"]
+                item["question"], answer, item["reference_answer"], item["format"]
             )
-
-            update_exam_results(
-                item,
-                answer,
-                score
-            )
-        else:
+            update_exam_results(item, answer.strip(), score)
+        except Exception as e:
+            print(f"FAILED: {type(e).__name__}: {e}")
             remaining_failed.append(item)
 
-    with open(EXAM_DIR / "failed_questions.json", "w") as file:
-        json.dump(
-            remaining_failed,
-            file,
-            indent=4
-        )
+        # Persist progress after each item so completed retries stay completed.
+        save_failed_questions(remaining_failed + failed_questions[idx + 1:])
+
+    save_failed_questions(remaining_failed)
+    rebuild_metrics()
+
 
 def update_exam_results(failed_question, answer, score):
 
@@ -548,25 +615,28 @@ def update_exam_results(failed_question, answer, score):
 
     model = failed_question["model"]
 
+    if score not in (0, 1) or not answer.strip():
+        raise ValueError("Cannot save an unanswered or unscored question")
     questions = results[model]["answers"]
-
-    for culture in questions:
-        if culture== failed_question["culture"]:
-
-            for dimension in questions[culture]:
-                if dimension== failed_question["dimension"]:
-                    for qtype in questions[culture][dimension]:
-                        if qtype== failed_question["type"]:
-                            print(f"exam_result.json updated ´with: {culture} | {dimension} | {qtype}")
-                            questions[culture][dimension][qtype].append({
-                                "question": failed_question["question"],
-                                "llm_answer": answer,
-                                "reference_answer": failed_question["reference_answer"],
-                                "score": score,
-                            })
-
-    with open(EXAM_DIR / "exam_results.json", "w") as file:
-        json.dump(results, file, indent=4)
+    group = questions.setdefault(failed_question["culture"], {}).setdefault(
+        failed_question["dimension"], {}).setdefault(failed_question["type"], [])
+    entry = {
+        "question": failed_question["question"],
+        "llm_answer": answer,
+        "reference_answer": failed_question["reference_answer"],
+        "score": score,
+    }
+    # Replace an existing entry if a retry was interrupted after saving its answer.
+    matches = [i for i, saved in enumerate(group)
+               if saved["question"] == entry["question"]
+               and saved["reference_answer"] == entry["reference_answer"]]
+    if len(matches) > 1:
+        raise ValueError("Duplicate saved responses for retry question")
+    if matches:
+        group[matches[0]] = entry
+    else:
+        group.append(entry)
+    save_exam_results(results)
 
 
 
@@ -610,7 +680,8 @@ def rebuild_metrics():
         raise ValueError("No answer groups found; metrics were not changed.")
     df_detail = save_csv(results_table)
     save_exam_results(results)
-    print_examination_summary(df_detail)
+    if examination_complete(results, load_questions()):
+        print_examination_summary(df_detail)
     return model_totals
 
 
@@ -623,6 +694,7 @@ def main(mode="full"):
 
     elif mode == "retry":
         print_banner("COMPLETING EXAM")
+        setup_examination_output()
         retry_failed_questions()
 
     elif mode == "rebuild_metrics":
@@ -630,7 +702,12 @@ def main(mode="full"):
         for model, total in rebuild_metrics().items():
             print(f"{model}: {total} saved answers")
 
-    print("\nTo proceed with the charts, execute: python graphics.py")
+    with open(EXAM_DIR / "exam_results.json", encoding="utf-8") as file:
+        results = json.load(file)
+    with open(QUESTIONS_DIR / "questions.json", encoding="utf-8") as file:
+        data = json.load(file)
+    if examination_complete(results, data):
+        print("\nTo proceed with the charts, execute: python graphics.py")
 
 
 if __name__ == "__main__":
