@@ -192,7 +192,10 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
             with redirect_stdout(summary_output):
                 complete = print_dimension_summary(culture, dimension, stats, question_counts, valid_process)
             write_summary(summary_output.getvalue().rstrip("\n"), summary_path)
-            
+
+        if not complete:
+            update_empty_knowledge_report(culture, dimension)
+        
         if experiment_counts is not None:
             experiment_counts["complete" if complete else "incomplete"] += 1
 
