@@ -62,7 +62,7 @@ def plot_model_questiontype_accuracy(df_final):
     plt.ylabel("Accuracy")
     plt.xlabel("Question type")
 
-    plt.ylim(0.4,1)
+    plt.ylim(0.29,1)
 
     plt.xticks(rotation=30)
 
@@ -203,6 +203,18 @@ def plot_model_culture_dimension(df_dimension):
     # plt.show()
 
 if __name__ == "__main__":
+    import json
+    from result_paths import QUESTIONS_DIR
+    from examinationLLM import examination_complete, rebuild_metrics
+
+    with open(EXAM_DIR / "exam_results.json", encoding="utf-8") as file:
+        results = json.load(file)
+    with open(QUESTIONS_DIR / "questions.json", encoding="utf-8") as file:
+        questions = json.load(file)
+    if not examination_complete(results, questions):
+        raise SystemExit("Graphs were not generated: complete pending questions with examinationLLM --mode retry.")
+    rebuild_metrics()
+
     df = pd.read_csv(EXAM_DIR / "model_culture_questiontype_results.csv")
     df_detail = pd.read_csv(
         EXAM_DIR / "model_culture_dimension_questiontype_results.csv"
