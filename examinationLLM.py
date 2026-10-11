@@ -4,6 +4,7 @@ import json
 import shutil
 import atexit
 import sys
+import time
 from datetime import datetime
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -259,7 +260,11 @@ def student_answer(endpoint, model, question, options, question_format,
 def examination_complete(results, data):
     """Require exactly one answered, scored response to every expected question."""
     complete = bool(results) and bool(data)
-    expected_models = {model for models in STUDENT_MODELS.values() for model in models}
+    run_path = EXAM_DIR / "exam_run.json"
+    if run_path.exists():
+        expected_models = set(json.loads(run_path.read_text(encoding="utf-8"))["model_endpoints"])
+    else:
+        expected_models = {model for models in STUDENT_MODELS.values() for model in models}
     if expected_models - results.keys():
         print(f"Missing student models: {sorted(expected_models - results.keys())}")
         complete = False
@@ -289,7 +294,7 @@ def examination_complete(results, data):
         print("Examination incomplete. Retry pending questions before comparing models.")
     return complete
 
-def examination(llm_model, examination_data, endpoint):
+def examination(llm_model, examination_data, endpoint, checkpoint=None):
     answers = {}
     metrics = {}
     failed_questions = []
@@ -382,6 +387,9 @@ def examination(llm_model, examination_data, endpoint):
                         if failed_question not in failed_questions:
                             failed_questions.append(failed_question)
 
+                    if checkpoint is not None:
+                        checkpoint(llm_model, answers, failed_questions)
+
     questions_size = sum(
         metrics[c][d][q]["total"]
         for c in metrics
@@ -442,30 +450,32 @@ GRADER_MODELS = {
     "openai": "gpt-4o",
     "interweb": "gpt-4.1-mini",
     "openrouter": "qwen/qwen3.8-max-0902",
-    "inference": "granite-4.1:8b-bf16",
+    "inference": "gpt-oss:120b-mxfp4",
 }
 
 GRADER_ENDPOINT = "inference"
 GRADER_LLM = GRADER_MODELS[GRADER_ENDPOINT]
 
-def save_exam_results(examination_results):
-    output_path = EXAM_DIR / "exam_results.json"
-    with open(output_path, "w", encoding="utf-8") as file:
-        json.dump(
-            examination_results,
-            file,
-            indent=4,
-            ensure_ascii=False
-        )
+def save_exam_json(filename, value):
+    """Replace a checkpoint only after its complete JSON has been written."""
+    output_path = EXAM_DIR / filename
+    temporary_path = output_path.with_suffix(output_path.suffix + ".tmp")
+    temporary_path.write_text(json.dumps(value, indent=4, ensure_ascii=False), encoding="utf-8")
+    # Windows may temporarily lock the destination while another process reads it.
+    for attempt in range(6):  # Initial attempt plus five retries.
+        try:
+            temporary_path.replace(output_path)
+            return
+        except PermissionError as error:
+            if attempt == 5:
+                raise PermissionError(
+                    f"Could not replace {output_path} after five retries. "
+                    f"The temporary checkpoint remains at {temporary_path}. "
+                    "Resolve the file lock or permissions, then resume with "
+                    "python -m examinationLLM --mode retry."
+                ) from error
+            time.sleep(0.5)
 
-def save_failed_questions(failed_questions):
-    with open(EXAM_DIR / "failed_questions.json", "w", encoding="utf-8") as file:
-        json.dump(
-            failed_questions,
-            file,
-            indent=4,
-            ensure_ascii=False
-        )
 
 def save_csv(results_table):
     df_detail = pd.DataFrame(results_table)
@@ -514,7 +524,38 @@ def run_full_exam():
 
     results_table = []
     failed_questions = []
-    examination_results = {}
+    model_endpoints = {model: endpoint for endpoint, models in STUDENT_MODELS.items()
+                       for model in models}
+    examination_results = {model: {"accuracy": 0, "answers": {}}
+                           for model in model_endpoints}
+    save_exam_json("exam_run.json", {"model_endpoints": model_endpoints})
+    save_exam_json("exam_results.json", examination_results)
+    save_exam_json("failed_questions.json", [])
+
+    def checkpoint(model, answers, pending):
+        """Save the current model's progress and questions needing a retry."""
+        total_score = 0
+        answer_count = 0
+
+        for culture_answers in answers.values():
+            for dimension_answers in culture_answers.values():
+                for question_type_answers in dimension_answers.values():
+                    for answer in question_type_answers:
+                        total_score += answer["score"]
+                        answer_count += 1
+
+        accuracy = 0
+        if answer_count > 0:
+            accuracy = total_score / answer_count
+
+        examination_results[model] = {
+            "accuracy": accuracy,
+            "answers": answers,
+        }
+        save_exam_json("exam_results.json", examination_results)
+
+        questions_to_retry = failed_questions + pending
+        save_exam_json("failed_questions.json", questions_to_retry)
 
     for endpoint, models,  in STUDENT_MODELS.items():
         for model in models:
@@ -525,7 +566,8 @@ def run_full_exam():
             accuracy, answers, metrics, model_failed_questions = examination(
                 model,
                 data,
-                endpoint
+                endpoint,
+                checkpoint=checkpoint,
             )
 
             for failed_question in model_failed_questions:
@@ -557,17 +599,61 @@ def run_full_exam():
                         })
 
 
-    save_exam_results(examination_results)
-    save_failed_questions(failed_questions)
+    save_exam_json("exam_results.json", examination_results)
+    save_exam_json("failed_questions.json", failed_questions)
     df_detail = save_csv(results_table)
     if examination_complete(examination_results, data):
         print_examination_summary(df_detail)
 
 
+def recover_pending_questions():
+    """Recover failures and unattempted questions from the saved run's answers."""
+    with open(EXAM_DIR / "exam_results.json", encoding="utf-8") as file:
+        results = json.load(file)
+    data = load_questions()
+    run_path = EXAM_DIR / "exam_run.json"
+    if run_path.exists():
+        endpoints = json.loads(run_path.read_text(encoding="utf-8"))["model_endpoints"]
+    else:
+        # Older runs lack metadata; recover only models present in their results.
+        endpoints = {}
+        for model in results:
+            matches = [endpoint for endpoint, models in STUDENT_MODELS.items() if model in models]
+            endpoints[model] = matches[0] if len(matches) == 1 else None
+    pending = []
+    for model, endpoint in endpoints.items():
+        result = results.setdefault(model, {"accuracy": 0, "answers": {}})
+        for culture, dimensions in data.items():
+            for dimension, types in dimensions.items():
+                for qtype, questions in types.items():
+                    saved = result["answers"].get(culture, {}).get(dimension, {}).get(qtype, [])
+                    for question in questions:
+                        completed = any(
+                            answer.get("question") == question["question"]
+                            and answer.get("reference_answer") == question["reference_answer"]
+                            and answer.get("score") in (0, 1)
+                            and isinstance(answer.get("llm_answer"), str)
+                            and answer["llm_answer"].strip()
+                            for answer in saved
+                        )
+                        if not completed:
+                            pending.append({
+                                "model": model, "endpoint": endpoint,
+                                "culture": culture, "dimension": dimension,
+                                "type": qtype, "format": question["format"],
+                                "question": question["question"],
+                                "options": question.get("options"),
+                                "reference_answer": question["reference_answer"],
+                            })
+    save_exam_json("exam_results.json", results)
+    save_exam_json("failed_questions.json", pending)
+    print(f"Pending questions recovered: {len(pending)}")
+    return pending
+
+
 def retry_failed_questions():
 
-    with open(EXAM_DIR / "failed_questions.json", "r", encoding="utf-8") as file:
-        failed_questions = json.load(file)
+    failed_questions = recover_pending_questions()
 
     remaining_failed = []
 
@@ -602,9 +688,9 @@ def retry_failed_questions():
             remaining_failed.append(item)
 
         # Persist progress after each item so completed retries stay completed.
-        save_failed_questions(remaining_failed + failed_questions[idx + 1:])
+        save_exam_json("failed_questions.json", remaining_failed + failed_questions[idx + 1:])
 
-    save_failed_questions(remaining_failed)
+    save_exam_json("failed_questions.json", remaining_failed)
     rebuild_metrics()
 
 
@@ -636,7 +722,7 @@ def update_exam_results(failed_question, answer, score):
         group[matches[0]] = entry
     else:
         group.append(entry)
-    save_exam_results(results)
+    save_exam_json("exam_results.json", results)
 
 
 
@@ -679,7 +765,7 @@ def rebuild_metrics():
     if not results_table:
         raise ValueError("No answer groups found; metrics were not changed.")
     df_detail = save_csv(results_table)
-    save_exam_results(results)
+    save_exam_json("exam_results.json", results)
     if examination_complete(results, load_questions()):
         print_examination_summary(df_detail)
     return model_totals
