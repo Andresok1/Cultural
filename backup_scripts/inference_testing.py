@@ -11,9 +11,10 @@ load_dotenv()
 BASE_URL = "https://inference.kbs.uni-hannover.de/v1"
 
 MODELS = [
-    "granite-4.1:8b-bf16",
-    "gemma3:4b-f16",
-    "qwen3.5:9b-bf16",
+    # "granite-4.1:8b-bf16",
+    # "gemma3:4b-f16",
+    # "qwen3.5:9b-bf16",
+    "gpt-oss:120b-mxfp4",
 ]
 
 TEST_PROMPT = """
@@ -36,12 +37,30 @@ client = OpenAI(
 models = client.models.list()
 
 for model in models.data:
-    print(model.id)
+    print(f"\nModel: {model.id}")
+    print(json.dumps(model.model_dump(), indent=4))
 
 # exit()
 
 results = []
 
+# MODEL = "gpt-oss:120b-mxfp4"
+
+# model = client.models.retrieve(MODEL)
+# metadata = model.model_dump()
+
+# print(json.dumps(metadata, indent=4))
+
+# for field in [
+#     "context_length",
+#     "max_context_length",
+#     "max_model_len",
+#     "num_ctx",
+# ]:
+#     if field in metadata:
+#         print(f"{field}: {metadata[field]}")
+
+exit()
 
 for model in MODELS:
 
