@@ -124,6 +124,15 @@ culture_language = {
 
 def cultural_exam(cultures_dimensions, teacher_model=None):
 
+    dimension_names = pd.read_csv(
+        BASE_DIR.parent / "cultural_parameters" / "cultureScope.csv"
+    )["Fine-grained Dimension"].tolist()
+    dimension_numbers = {name: number for number, name in enumerate(dimension_names, start=1)}
+    for dimensions in cultures_dimensions.values():
+        for dimension in dimensions:
+            if dimension not in dimension_numbers:
+                raise ValueError(f"Unknown dimension in cultureScope.csv: {dimension}")
+
     for culture, dimensions in cultures_dimensions.items():
     # for culture in cultures:
         for dimension_number, dimension in enumerate(dimensions[dimension_start:], start=dimension_start):
@@ -145,7 +154,10 @@ def cultural_exam(cultures_dimensions, teacher_model=None):
             for lang, query in queries.items():
                 print(f"Query: {query} ")
                 print(f"------------{lang}--------------")
-                ranking = fetch_raw_results(query, key)
+                ranking = fetch_raw_results(
+                    query, key, culture=culture,
+                    dimension_number=dimension_numbers[dimension], language=lang
+                )
 
                 languages[lang] = {
                     "query": query,

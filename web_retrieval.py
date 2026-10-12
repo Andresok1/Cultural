@@ -1,8 +1,5 @@
-from hashlib import sha256
 import requests
-import json
 import unicodedata
-from result_paths import KNOWLEDGE_DIR
 from bs4 import BeautifulSoup
 from ddgs import DDGS
 from ddgs.exceptions import DDGSException
@@ -58,15 +55,15 @@ def fetch_page_content(url, max_chars=50000):
         return None
 
 
-def fetch_raw_results(query,key, num_results=10, min_length=150, print_on=False):
+def fetch_raw_results(query, key, num_results=10, min_length=150, print_on=False,
+                      *, culture, dimension_number, language):
     """
     Search with DuckDuckGo (posiblemente no sea DuckDuckGo sino uno general, usa DDGS) and optionally 
     fetch full content of results. 
-    Returns valid documents as dictionaries containing document_id and text.
+    Returns valid documents containing document_id, url, and text.
     """
 
     context = []
-    sources = []
 
     backends = ["google", "bing", "duckduckgo", "brave", "yahoo"] 
 
@@ -133,9 +130,8 @@ def fetch_raw_results(query,key, num_results=10, min_length=150, print_on=False)
 
             if len(content_cleaned.split()) > min_length:
 
-                document_id = "doc_" + sha256(link.encode("utf-8")).hexdigest()
-                context.append({"document_id": document_id, "text": content_cleaned})
-                sources.append({"document_id": document_id, "title": title, "url": link})
+                document_id = f"{culture}_{dimension_number}_{language}_{len(context) + 1}"
+                context.append({"document_id": document_id, "url": link, "text": content_cleaned})
 
             else: 
                 too_short += 1
@@ -145,14 +141,6 @@ def fetch_raw_results(query,key, num_results=10, min_length=150, print_on=False)
 
     print(f"Retrieved: {len(results_original)} | Duplicates: {eliminated} | Invalid: {len(results) - len(context)} | Valid: {len(context)}")
 
-
-    sources_path = KNOWLEDGE_DIR / "document_sources.json"
-    source_report = json.loads(sources_path.read_text(encoding="utf-8")) if sources_path.exists() else {}
-    source_report = {identifier: source for identifier, source in source_report.items()
-                     if identifier.startswith("doc_") and isinstance(source, dict) and "url" in source}
-    for source in sources:
-        source_report[source["document_id"]] = source
-    sources_path.write_text(json.dumps(source_report, ensure_ascii=False, indent=2), encoding="utf-8")
 
     return context
 
