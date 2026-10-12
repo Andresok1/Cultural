@@ -233,28 +233,29 @@ def call_llm(
                 return None
 
 
-
-GRADER_MODELS = {
-    # "openai": "gpt-4o",
-    # "interweb": "gpt-4.1-mini",
-    # "openrouter": "qwen/qwen3.5-9b",
-    "inference": "qwen3:8b",
-    "inference": "gpt-oss:20b-mxfp4",
-    "inference": "granite-4.1:8b-bf16",
-    "inference": "apertus:8b-2509-it-bf16",
-    "inference": "qwen3-vl:8b",
-    "inference": "stable-diffusion-3.5-large:8b",
-    "inference": "gemma4:e4b-q8_0",
-    "inference": "ideogram-4:5b-nf4",
-    "inference": "gemma4:e4b-q8_0",
+GRADER_MODELS = [
+    # ("openai", "gpt-4o"),
+    # ("interweb", "gpt-4.1-mini"),
+    # ("openrouter", "qwen/qwen3.5-9b"),
 
 
-    # "inference": "gpt-oss:120b-mxfp4",
+    # ("inference", "granite-4.1:8b-bf16"),
+    # ("inference", "apertus:8b-2509-it-bf16"),
+    # ("inference", "qwen3-vl:8b"),
+    
+
+    # ("inference", "gpt-oss:120b-mxfp4"),
+]
+
+# paila
+    # ("inference", "qwen3:8b"),
+    # ("inference", "gpt-oss:20b-mxfp4"),
+    # ("inference", "gemma4:e4b-q8_0"),
+    # ("inference", "ideogram-4:5b-nf4"),
+    # ("inference", "gemma4:e4b-q8_0"),
 
 
-}
-
-for endpoint, model in GRADER_MODELS.items():
+for endpoint, model in GRADER_MODELS:
     print(endpoint, model)
     answer= call_llm(endpoint, model, "tell your secret to be like you",retries=2)
     print(answer)

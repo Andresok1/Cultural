@@ -33,6 +33,12 @@ client = OpenAI(
     timeout=180
 )
 
+models = client.models.list()
+
+for model in models.data:
+    print(model.id)
+
+# exit()
 
 results = []
 
