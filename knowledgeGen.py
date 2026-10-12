@@ -7,7 +7,6 @@ from questionGen import question_creation
 from utils import update_empty_knowledge_report, extraction_entries, print_dimension_summary, coverage_threshold, write_summary
 from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge, inference_create_knowledge
 from deep_translator import MyMemoryTranslator
-from call_llm import call_llm
 
 def translate(text, target_lang):
     try:
@@ -124,8 +123,6 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
                     knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
                 elif args.api == "inference":
                     knowledge_text = inference_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
-                elif args.api == "all":
-                    knowledge_text = call_llm(args, endpoint= args.api,text=prompt_texts, culture=culture, dimension=dimension, language=batch_label)
                 else:
                     knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
 
