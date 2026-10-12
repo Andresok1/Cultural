@@ -128,9 +128,6 @@ def experiment(inputs, sizes, api, model, root=EXPERIMENT_DIR, runner=run_batche
     run_dir = Path(root) / datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     run_dir.mkdir(parents=True, exist_ok=False)
     save_json(run_dir / "inputs.json", inputs)
-    sources = KNOWLEDGE_DIR / "document_sources.json"
-    if sources.exists():
-        save_json(run_dir / "document_sources.json", json.loads(sources.read_text(encoding="utf-8")))
     save_json(run_dir / "settings.json", {
         "batch_sizes": sizes, "api": api, "requested_model": model,
         "effective_model": "gpt-4o-mini" if api == "openai" else model,
