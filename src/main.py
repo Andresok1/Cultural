@@ -139,7 +139,8 @@ def cultural_exam(cultures_dimensions, teacher_model=None):
             print(f"Processing dimension {dimension_number+1}/{len(dimensions)}: {dimension}")
             key = f"{culture}_{dimension}"
 
-            base_query = f"{dimension} in {culture} culture"
+            extra_text = " in date formats" if dimension == "zero-padding" else ""
+            base_query = f"{dimension}{extra_text} in {culture} culture"
             queries = {
                 "english": base_query
             }
