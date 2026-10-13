@@ -23,7 +23,7 @@ def unreadable_text(text):
 
 
 
-def fetch_page_content(url, max_chars=50000):
+def fetch_page_content(url):
     """Fetch and extract text 
     content from a URL."""
     try:
@@ -49,7 +49,7 @@ def fetch_page_content(url, max_chars=50000):
         if unreadable_text(text):
             return None
 
-        return text[:max_chars] if len(text) > max_chars else text #Anwers format
+        return text
     except Exception as e:
         pass
         return None

@@ -16,3 +16,4 @@ seaborn== 0.13.2
 sentence-transformers==6.1.0
 scikit-learn==1.9.1
 #python 3.11
+tiktoken == 0.14.0

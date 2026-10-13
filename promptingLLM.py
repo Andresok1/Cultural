@@ -317,6 +317,7 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
 
             response = client.chat.completions.create(
                 model=teacher_model,
+                max_tokens=getattr(args, "inference_output_tokens", None),
                 messages=[
                     {
                         "role": "system",
@@ -329,6 +330,10 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
                 ]
             )
 
+            if response.choices[0].finish_reason == "length":
+                return False  # knowledgeGen retries smaller inputs.
+            if response.choices[0].finish_reason != "stop":
+                return None
             answer = response.choices[0].message.content
 
             print(
@@ -340,7 +345,6 @@ def inference_create_knowledge(args, text=None, culture=None, dimension=None, re
 
             if (
                 answer is None
-                or "[]" in answer
                 or answer.strip() == ""
             ):
 

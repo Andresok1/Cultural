@@ -1,12 +1,93 @@
 from result_paths import KNOWLEDGE_DIR
 import json
 import os
+import tiktoken
+
 from contextlib import redirect_stdout
 from io import StringIO
 from questionGen import question_creation
 from utils import update_empty_knowledge_report, extraction_entries, print_dimension_summary, coverage_threshold, write_summary
-from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge, inference_create_knowledge
+from promptingLLM import interweb_create_knowledge, json_cleanig, openai_create_knowledge, openrouter_create_knowledge, inference_create_knowledge, PROMPT_KNOWLEDGE, ROLE_KNOWLEDGE
 from deep_translator import MyMemoryTranslator
+from math import ceil
+
+
+def inference_batch_entries(args, texts, culture, dimension, teacher_model, label):
+    """Check and split the existing document batch before calling the teacher."""
+
+    TEACHER_CONTEXT_WINDOWS = {
+        "gpt-oss:120b-mxfp4": 131072,
+    }
+
+    context = TEACHER_CONTEXT_WINDOWS.get(teacher_model)
+
+    if context is None:
+        raise ValueError(
+            f"Unknown context window for teacher model: {teacher_model}"
+        )
+
+    output_tokens = ceil(context * 0.10)
+    args.inference_output_tokens = output_tokens
+    safety_tokens = ceil(context * 0.02)
+
+    input_limit = context - output_tokens - safety_tokens
+    encoding = tiktoken.get_encoding("o200k_harmony")
+
+    def count(parts):
+        documents = "\n\n".join(f"Text {i}:\n{text}" for i, text in enumerate(parts, 1))
+
+        return sum(
+            len(encoding.encode(value, disallowed_special=()))
+            for value in (
+                "system",
+                ROLE_KNOWLEDGE,
+                "user",
+                PROMPT_KNOWLEDGE(culture, dimension, documents) + "\n"
+            )
+        )
+
+    pending = [(texts, 0)]
+    findings = []
+    failure_status = None
+
+    while pending:
+        parts, depth = pending.pop(0)
+        overhead = count([""] * len(parts))
+        tokens = count(parts)
+
+        print(f"{label} |"
+              f"remaining tokens={input_limit - tokens}")
+
+        if overhead >= input_limit:
+            raise ValueError("Extraction instructions leave no document budget")
+        
+        too_large = tokens > input_limit
+        response = False if too_large else inference_create_knowledge(
+            args, text=parts, culture=culture, dimension=dimension,
+            language=label, teacher_model=teacher_model)
+        if response is False:
+            if (too_large and len(parts) == 1 and len(parts[0]) <= 1) or (
+                    not too_large and (depth >= 12 or (len(parts) == 1 and len(parts[0]) <= 256))):
+                failure_status = "unresolved_token_limit"
+                continue
+            if len(parts) > 1:
+                middle = len(parts) // 2
+                children = [parts[:middle], parts[middle:]]
+            else:
+                middle = len(parts[0]) // 2
+                boundary = parts[0].rfind(" ", middle // 2, middle)
+                if boundary > 0:
+                    middle = boundary + 1
+                children = [[parts[0][:middle]], [parts[0][middle:]]]
+            pending[:0] = [(child, depth + (not too_large)) for child in children]
+            print(f"{label} | Splitting input to fit token limits")
+            continue
+        entries, valid, status = extraction_entries(response, json_cleanig)
+        if not valid:
+            failure_status = status
+            continue
+        findings.extend(entries)
+    return findings, failure_status is None, failure_status or "valid"
 
 def translate(text, target_lang):
     try:
@@ -122,14 +203,16 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
                 elif args.api == "openrouter":
                     knowledge_text = openrouter_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
                 elif args.api == "inference":
-                    knowledge_text = inference_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
+                    valid_entries, valid_response, response_status = inference_batch_entries(
+                        args, prompt_texts, culture, dimension, teacher_model, batch_label)
                 else:
                     knowledge_text = interweb_create_knowledge(args, text=prompt_texts, culture=culture, dimension=dimension, language=batch_label, teacher_model=teacher_model)
 
-                valid_entries, valid_response, response_status = extraction_entries(
-                    knowledge_text,
-                    json_cleanig,
-                )
+                if args.api != "inference":
+                    valid_entries, valid_response, response_status = extraction_entries(
+                        knowledge_text,
+                        json_cleanig,
+                    )
 
                 language_entries.extend(valid_entries)
                 
