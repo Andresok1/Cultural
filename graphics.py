@@ -126,7 +126,7 @@ def plot_model_culture_qtype_accuracy(df_final):
 
 def df_model_culture_dimension(df_detail):
     culture_scope = pd.read_csv(
-        EXAM_DIR.parent.parent / "cultural_parameters" / "cultureScope.csv"
+        EXAM_DIR.parent.parent / "cultural_parameters" / "taxonomy_dimensions.csv"
     )
 
     dimension_categories = (

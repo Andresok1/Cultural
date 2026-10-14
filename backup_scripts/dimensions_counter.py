@@ -44,7 +44,7 @@ print("the number of categories are: ",len(test))
 import pandas as pd
 
 # Load CSV
-csv_path = r"C:\Users\Andres\Repos\Cultural_thesis\cultural_parameters\cultureScope.csv"
+csv_path = r"C:\Users\Andres\Repos\Cultural_thesis\cultural_parameters\taxonomy_dimensions.csv"
 
 df = pd.read_csv(csv_path)
 
