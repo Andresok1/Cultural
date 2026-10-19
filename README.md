@@ -1,9 +1,8 @@
 # Cultural thesis
 
-A pipeline for retrieving cultural information, generating knowledge and questions,
-and evaluating language models against reference answers. It covers Colombian,
-German, and Italian cultures using the dimensions in
-`cultural_parameters/taxonomy_dimensions.csv`.
+A systematic pipeline for evaluating cultural knowledge representation in Large Language Models (LLMs) across Colombian, German, and Italian cultures. Using a structured taxonomy of 140 cultural dimensions, the framework integrates cultural information retrieval, knowledge extraction, question generation with varying difficulty levels, and model evaluation against reference answers. The goal is to analyze model performance across different cultures, dimensions, and question characteristics.
+
+The complete list of cultural dimensions is available in `cultural_parameters/taxonomy_dimensions.csv`.
 
 ## Setup
 
