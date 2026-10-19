@@ -202,7 +202,7 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
     
     return prompt, selected_format
 
-def openai_create_question(text, question_type, culture, question_language, dimension=None):
+def openai_create_question(text, question_type, culture, question_language, dimension=None, culture_language=None):
     """
     As input it receives a text and extracts important features and content related to a specific culture to generate a question.
     
@@ -226,12 +226,7 @@ def openai_create_question(text, question_type, culture, question_language, dime
     
     if question_language == "local":
          
-        local_dictionary = {
-            "colombian": "Spanish",
-            "italian": "Italian",
-            "german": "German"}
-
-        language = local_dictionary.get(culture, "English")
+        language = (culture_language or {}).get(culture.capitalize(), "english").capitalize()
     else:        
         language = "English"
 
@@ -274,12 +269,7 @@ def interweb_create_question(args, text, question_type, culture, question_langua
     
     if question_language == "local":
          
-        local_dictionary = {
-            "colombian": "Spanish",
-            "italian": "Italian",
-            "german": "German"}
-
-        language = local_dictionary.get(culture, "English")
+        language = args.culture_language.get(culture.capitalize(), "english").capitalize()
     else:        
         language = "English"
 
@@ -390,12 +380,7 @@ def openrouter_create_question(args, text, question_type, culture, dimension, qu
 
     if question_language == "local":
          
-        local_dictionary = {
-            "colombian": "Spanish",
-            "italian": "Italian",
-            "german": "German"}
-
-        language = local_dictionary.get(culture, "English")
+        language = args.culture_language.get(culture.capitalize(), "english").capitalize()
     else:        
         language = "English"
 
@@ -621,7 +606,7 @@ def knowledge_to_question(args, culture, dimension, knowledge_list, typ, teacher
     '''
     started = perf_counter()
     if args.api == "openai":
-        result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language, dimension=dimension)
+        result = openai_create_question(text=knowledge_list, question_type=typ, culture=culture, question_language=args.question_language, dimension=dimension, culture_language=args.culture_language)
     elif args.api == "openrouter":
         result = openrouter_create_question(args, text=knowledge_list, question_type=typ, culture=culture,dimension=dimension, question_language=args.question_language)
     elif args.api == "inference":
