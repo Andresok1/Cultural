@@ -67,6 +67,7 @@ again. Failed attempts go to `emptyKnowledge.json` for retry.
 | `--batch_size` | Positive integer; default `2` | Documents per knowledge batch; all valid documents are processed. |
 | `--question_language` | `english` (default), `local` | Select the question language. |
 | `--question_type` | `all` (default), `factual`, `conceptual`, `misleading`, `long_form` | Generate all four types or one type. |
+
 Teacher models are configured in `TEACHER_MODELS` in `src/main.py`.
 
 ## Model examination
