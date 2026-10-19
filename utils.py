@@ -1,5 +1,39 @@
 import json
+import os
+import tempfile
+from pathlib import Path
 from result_paths import KNOWLEDGE_DIR
+
+def atomic_write_json(path, value):
+    path = Path(path)
+    descriptor, temporary = tempfile.mkstemp(dir=path.parent, prefix=path.name, suffix=".tmp")
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as document:
+            json.dump(value, document, ensure_ascii=False, indent=2)
+            document.flush()
+            os.fsync(document.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def remove_dimension(path, culture, dimension):
+    path = Path(path)
+    if path.exists():
+        entries = json.loads(path.read_text(encoding="utf-8"))
+        atomic_write_json(path, [entry for entry in entries
+                                if (entry["culture"], entry["dimension"]) != (culture, dimension)])
+
+
+def reconstruct_queue(cultures, dimensions, questions, failures):
+    failed = {(entry["culture"], entry["dimension"]) for entry in failures}
+    types = ("factual", "conceptual", "misleading", "long_form")
+    return [{"culture": culture, "dimension": dimension}
+            for culture in cultures for dimension in dimensions
+            if (culture, dimension) not in failed
+            and not all(questions.get(culture, {}).get(dimension, {}).get(typ) for typ in types)]
+
 
 def update_empty_knowledge_report(culture, dimension):
     report_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
@@ -20,8 +54,7 @@ def update_empty_knowledge_report(culture, dimension):
         "dimension": dimension
     })
 
-    with report_path.open("w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
+    atomic_write_json(report_path, report)
 
 import json 
 

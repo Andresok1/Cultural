@@ -1,4 +1,5 @@
 from utils import update_empty_knowledge_report
+from utils import atomic_write_json
 from result_paths import KNOWLEDGE_DIR, QUESTIONS_DIR
 import re
 import random
@@ -757,8 +758,7 @@ def question_creation(args, dimension, culture, timestamp, culture_dfs, knowledg
                 "options": abcd_options,
                 "reference_answer": reference_answer,
             })
-            with open(question_output_path, "w", encoding="utf-8") as f:
-                json.dump(question_vector, f, ensure_ascii=False, indent=2)
+            atomic_write_json(question_output_path, question_vector)
 
 
         output_path = KNOWLEDGE_DIR / f"knowledge_output.json"
@@ -785,8 +785,7 @@ def question_creation(args, dimension, culture, timestamp, culture_dfs, knowledg
 
         knowledge_vector[culture][dimension] = data_knowledge_info
 
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(knowledge_vector, f, ensure_ascii=False, indent=2)
+        atomic_write_json(output_path, knowledge_vector)
 
         if failed:
             continue

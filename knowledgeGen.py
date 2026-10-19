@@ -1,4 +1,5 @@
 from result_paths import KNOWLEDGE_DIR
+from utils import atomic_write_json, remove_dimension
 import json
 import os
 import tiktoken
@@ -251,11 +252,9 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
         knowledge_input_dict[culture][dimension] = knowledge_input_dicc
 
 
-        with open(output_path, "w", encoding="utf-8") as f:     #Save knowledge_output (RAW knowledge)
-            json.dump(knowledge_output_dict, f, ensure_ascii=False, indent=2)
+        atomic_write_json(output_path, knowledge_output_dict)
 
-        with open(input_path, "w", encoding="utf-8") as f:      #Save knowledge_input
-            json.dump(knowledge_input_dict, f, ensure_ascii=False, indent=2)
+        atomic_write_json(input_path, knowledge_input_dict)
 
         question_counts = None
 
@@ -279,17 +278,9 @@ def knowledge_level_manager(args, timestamp, query_results, culture_dfs=None,
         if experiment_counts is not None:
             experiment_counts["complete" if complete else "incomplete"] += 1
 
-        if getattr(args, "mode", None) == "retry" and complete:
+        if getattr(args, "mode", None) in ("retry", "resume") and complete:
             report_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
-            if report_path.exists():
-                with report_path.open("r", encoding="utf-8") as f:
-                    failed_dimensions = json.load(f)
-                failed_dimensions = [
-                    item for item in failed_dimensions
-                    if (item["culture"], item["dimension"]) != (culture, dimension)
-                ]
-                with report_path.open("w", encoding="utf-8") as f:
-                    json.dump(failed_dimensions, f, ensure_ascii=False, indent=2)
+            remove_dimension(report_path, culture, dimension)
 
 
     return knowledge_output

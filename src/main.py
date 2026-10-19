@@ -5,6 +5,7 @@ from web_retrieval import fetch_raw_results
 from utils import print_experiment_summary
 from knowledgeGen import knowledge_level_manager, translate
 from pathlib import Path
+from utils import atomic_write_json, remove_dimension
 
 import pandas as pd
 import json
@@ -111,9 +112,9 @@ parser.add_argument(
 
 parser.add_argument(
     "--mode",
-    choices=["full", "retry", "single"],
+    choices=["full", "resume", "retry", "single"],
     default="full",
-    help="Run the normal process, retry the dimensions in emptyKnowledge.json, or test selected cultures and dimensions.",
+    help="Start fresh, resume dimensions_queue.json, retry emptyKnowledge.json, or test selected dimensions.",
 )
 
 culture_language = {
@@ -137,6 +138,21 @@ def cultural_exam(cultures_dimensions, teacher_model=None):
     # for culture in cultures:
         for dimension_number, dimension in enumerate(dimensions[dimension_start:], start=dimension_start):
             print(f"Processing dimension {dimension_number+1}/{len(dimensions)}: {dimension}")
+            if args.mode == "resume":
+                # Restart the entire queued dimension, including its saved partial questions.
+                questions_path = QUESTIONS_DIR / "questions.json"
+                if questions_path.exists():
+                    questions = json.loads(questions_path.read_text(encoding="utf-8"))
+                    questions.get(culture, {}).pop(dimension, None)
+                    atomic_write_json(questions_path, questions)
+                if culture in culture_dfs:
+                    culture_dfs[culture] = [
+                        frame.loc[frame["dimension"] != dimension].copy()
+                        for frame in culture_dfs[culture]
+                    ]
+                    pd.concat(culture_dfs[culture], ignore_index=True).to_csv(
+                        QUESTIONS_DIR / f"{culture}_Knowledge_QA.csv", index=False, encoding="utf-8-sig"
+                    )
             key = f"{culture}_{dimension}"
 
             extra_text = " in date formats" if dimension == "zero-padding" else ""
@@ -173,14 +189,16 @@ def cultural_exam(cultures_dimensions, teacher_model=None):
                 "languages": languages
             }   
 
-            with open(KNOWLEDGE_DIR / "query_results.json", "w", encoding="utf-8") as f:
-                json.dump(all_results, f, ensure_ascii=False, indent=2)
+            atomic_write_json(KNOWLEDGE_DIR / "query_results.json", all_results)
 
             # Finish knowledge and questions before retrieving the next dimension.
             knowledge_level_manager(
                 args, timestamp, {key: all_results[key]}, culture_dfs,
                 summary_path=summary_path, experiment_counts=experiment_counts[culture], teacher_model=teacher_model
             )
+            if args.mode in ("full", "resume"):
+                # The manager saves questions or records failure before returning.
+                remove_dimension(KNOWLEDGE_DIR / "dimensions_queue.json", culture, dimension)
 
     print("All Done!")
 
@@ -199,22 +217,23 @@ TEACHER_MODELS = {
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    args.culture_language = culture_language
 
     culs_dims = {}
 
-    if args.mode == "retry":
+    if args.mode in ("retry", "resume"):
         dimension_start = 0
         # Read the failed dimensions before the result folders are cleaned.
-        empty_knowledge_path = KNOWLEDGE_DIR / "emptyKnowledge.json"
+        empty_knowledge_path = KNOWLEDGE_DIR / ("dimensions_queue.json" if args.mode == "resume" else "emptyKnowledge.json")
         if not empty_knowledge_path.exists():
-            print(f"No retry report found: {empty_knowledge_path}")
+            print(f"No {args.mode} list found: {empty_knowledge_path}")
             sys.exit(0)
 
         with empty_knowledge_path.open("r", encoding="utf-8") as f:
             failed_dimensions = json.load(f)
 
         if not failed_dimensions:
-            print("No failed dimensions to retry.")
+            print(f"No dimensions to process in {args.mode} mode.")
             sys.exit(0)
 
         for item in failed_dimensions:
@@ -251,11 +270,18 @@ if __name__ == "__main__":
             culs_dims[cul] = dimensions.copy()
 
     # Retry completes the saved run without deleting its results.
-    if args.mode != "retry":
+    if args.mode not in ("retry", "resume"):
         for results_folder in (KNOWLEDGE_DIR, QUESTIONS_DIR, EXAM_DIR):
             for file_path in results_folder.iterdir():
                 if file_path.is_file():
                     file_path.unlink()
+
+    if args.mode == "full":
+        atomic_write_json(KNOWLEDGE_DIR / "dimensions_queue.json", [
+            {"culture": culture, "dimension": dimension}
+            for culture, dimensions in culs_dims.items()
+            for dimension in dimensions[dimension_start:]
+        ])
 
     experiment_counts = {
         culture: {"complete": 0, "incomplete": 0}
@@ -264,7 +290,7 @@ if __name__ == "__main__":
     all_results = {}
     culture_dfs = {}
 
-    if args.mode == "retry":
+    if args.mode in ("retry", "resume"):
         query_results_path = KNOWLEDGE_DIR / "query_results.json"
         if query_results_path.exists():
             with query_results_path.open("r", encoding="utf-8") as f:
@@ -274,7 +300,7 @@ if __name__ == "__main__":
             if csv_path.exists():
                 culture_dfs[culture] = [pd.read_csv(csv_path)]
 
-    summary_path, terminal_output_path = setup_experiment_output(clear_previous=args.mode != "retry")
+    summary_path, terminal_output_path = setup_experiment_output(clear_previous=args.mode not in ("retry", "resume"))
 
     print(f"Experiment setup ({args.mode}):")
     for culture, dimensions in culs_dims.items():
