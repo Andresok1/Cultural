@@ -246,10 +246,39 @@ if __name__ == "__main__":
     elif args.mode == "single":
         dimension_start = 0
         # Edit these lists to choose what to test.
-        cultures = ["Colombian"]
+        cultures = ["Italian"]
         dimensions = [
-            # "stereotypes",
-            "authority"
+            'zero-padding',
+            'attitudes towards birth, aging, illness and death',
+            'authority',
+            'career choices',
+            'communal living',
+            'cultural acknowledgement',
+            'data order',
+            'education',
+            'entity type',
+            'ethnicity',
+            'ethnicity assumptions',
+            'famous river',
+            'handing gifts',
+            'idiom',
+            'land area percentage',
+            'major selection',
+            'marriage customs',
+            'name origin',
+            'name significance',
+            'naming convention',
+            'national holidays',
+            'ongoing negotiations after the business meeting',
+            'parental care',
+            'political criticism',
+            'population distribution',
+            'population rank',
+            'separator type',
+            'social interaction',
+            'stability & resolution',
+            'widely spoken languages',
+            'year format',
         ]
         for culture in cultures:
             culs_dims[culture] = dimensions.copy()
