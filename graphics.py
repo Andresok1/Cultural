@@ -45,14 +45,14 @@ def plot_model_questiontype_accuracy(df_final):
     Plots the accuracy of different models across question types.
     
     Parameters:
-    - df_final: DataFrame containing columns 'question_type', 'accuracy', and 'model'.
+    - df_final: DataFrame containing columns 'assessment_type', 'accuracy', and 'model'.
     """
     plt.figure(figsize=(8,5))
 
 
     sns.barplot(
         data=df_final,
-        x="question_type",
+        x="assessment_type",
         y="accuracy",
         hue="model",
         errorbar=None
@@ -60,14 +60,14 @@ def plot_model_questiontype_accuracy(df_final):
 
 
     plt.ylabel("Accuracy")
-    plt.xlabel("Question type")
+    plt.xlabel("Assessment type")
 
     plt.ylim(0.29,1)
 
     plt.xticks(rotation=30)
 
     plt.title(
-        "LLM performance by question type"
+        "LLM performance by assessment type"
     )
 
 
@@ -89,7 +89,7 @@ def plot_model_culture_qtype_accuracy(df_final):
         index="model",
         columns=[
             "culture",
-            "question_type"
+            "assessment_type"
         ]
     )
 
@@ -108,7 +108,7 @@ def plot_model_culture_qtype_accuracy(df_final):
 
 
     plt.title(
-        "Accuracy across models, cultures and question types"
+        "Accuracy across models, cultures and assessment types"
     )
 
 
