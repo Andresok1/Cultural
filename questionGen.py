@@ -21,10 +21,11 @@ QUESTION_TYPES = {
 }
 
 ROLE_QUESTION = """
-You are an expert educational assessment designer specialized in cultural knowledge evaluation.
-Your task is to create accurate assessment questions from provided cultural information.
-You design items that evaluate understanding, reasoning, and interpretation.
-Questions may include multiple-choice, true/false, short-answer, or long-answer formats.
+You are an expert educational assessment designer specializing in cultural knowledge evaluation and the development of rigorous benchmark questions for large language models.
+Your task is to transform provided cultural information into accurate, clear, and independently answerable assessment questions.
+You design questions that evaluate cultural knowledge, conceptual understanding, interpretation, and reasoning, according to the specified question type and difficulty.
+Your questions must be culturally contextualized, factually grounded, unambiguous, and suitable for systematic evaluation.
+You may generate multiple-choice, true/false, short-answer, or long-answer questions according to the requested format.
 """
 
 def group_raw_questions(history):
@@ -185,6 +186,10 @@ def PROMPT_QUESTION(instruction, prompt_texts, question_type, language="english"
         3. Do not change the structure of format given. Just fill in the content after these labels.
         4. If the provided information is insufficient to generate a meaningful question, do not ask for clarification and do not provide an explanation. Instead, keep the exact same format and write "EMPTY" in all fields.
         5. STRICT OUTPUT FORMAT: Replace only the content inside the brackets []. Your response must contain only the final values that belong inside those brackets. Do not provide reasoning, explanations, justifications, summaries, introductions, conclusions, markdown, or any additional text. Any text outside the required placeholders will be considered an invalid response.
+        6. SELF-CONTAINED QUESTIONS: The provided cultural information is exclusively for generating questions and will NOT be shown to the student. Every question must be fully understandable and answerable independently, without access to the source text, excerpts, passages, statements, or data used during generation. Never refer to information as "provided", "given", "described above", or "mentioned in the text". If specific facts, statistics, or contextual details are necessary to answer a question, explicitly include them within the question itself. Do not assume that the student has access to any additional material.
+        7. AVOID ANSWER LEAKAGE: Do not reveal or directly imply the correct answer within the question wording or its introductory context. The question must require the student to demonstrate the relevant cultural knowledge, understanding, or reasoning independently. Include only the contextual information necessary to make the question clear and self-contained, without providing the specific conclusion, explanation, or cultural fact being assessed.
+        8. EXPLICIT CULTURAL CONTEXT: Clearly identify the relevant country, culture, society, or community in each question whenever this information is necessary to determine the correct answer. Avoid ambiguous references such as "the country described", "this society", or "the culture mentioned". Questions must identify their cultural context without requiring access to the source material.
+
 
         Now generate the output.
         """
