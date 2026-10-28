@@ -81,15 +81,15 @@ def print_examination_summary(df_detail):
 
     category_summary = df_model_culture_dimension(df_detail)
 
-    question_type_summary = (
+    assessment_type_summary = (
         df_detail
-        .groupby(["model", "culture", "question_type"])
+        .groupby(["model", "culture", "assessment_type"])
         .agg(correct=("correct", "sum"), total=("total", "sum"))
         .reset_index()
     )
-    question_type_summary["accuracy"] = (
-        question_type_summary["correct"] /
-        question_type_summary["total"]
+    assessment_type_summary["accuracy"] = (
+        assessment_type_summary["correct"] /
+        assessment_type_summary["total"]
     )
 
     print_banner("EXAMINATION SUMMARY")
@@ -117,10 +117,10 @@ def print_examination_summary(df_detail):
             .to_string(index=False)
         )
 
-        print("\nAccuracy by question type")
+        print("\nAccuracy by assessment type")
         print(
-            question_type_summary[question_type_summary["model"] == model][
-                ["culture", "question_type", "correct", "total", "accuracy"]
+            assessment_type_summary[assessment_type_summary["model"] == model][
+                ["culture", "assessment_type", "correct", "total", "accuracy"]
             ]
             .assign(accuracy=lambda table: table["accuracy"].map("{:.2%}".format))
             .to_string(index=False)
@@ -493,7 +493,7 @@ def save_csv(results_table):
             [
                 "model",
                 "culture",
-                "question_type"
+                "assessment_type"
             ]
         )
         .agg(
@@ -589,7 +589,7 @@ def run_full_exam():
                             "model": model,
                             "culture": culture,
                             "dimension": dimension,
-                            "question_type": qtype
+                            "assessment_type": qtype
                         }
 
                         results_table.append({
@@ -753,7 +753,7 @@ def rebuild_metrics():
                         "model": model,
                         "culture": culture,
                         "dimension": dimension,
-                        "question_type": qtype,
+                        "assessment_type": qtype,
                         "correct": correct,
                         "total": total,
                     })
