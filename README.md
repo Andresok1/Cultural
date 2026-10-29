@@ -71,10 +71,17 @@ Teacher models are configured in `TEACHER_MODELS` in `src/main.py`.
 
 ## Model examination
 
-Finish question generation before starting examination.
+Complete the question generation stage before running the examination.
 
 Examination reads `results/questions/questions.json`, asks the configured student models to answer, and scores their responses against reference answers. Configure `STUDENT_MODELS`, `GRADER_MODELS`, and `GRADER_ENDPOINT` in `examinationLLM.py`.
 
+| Mode | Behavior |
+|------|----------|
+| `full` | Starts a fresh examination, clearing all previous examination results and evaluating all questions. |
+| `retry` | Continues an interrupted examination by processing failed or unanswered questions. |
+| `rebuild_metrics` | Regenerates performance summaries and metrics from previously saved answers without making new model calls. |     
+
+Run the examination using one of the following commands:
 
 ```powershell
 # Start a fresh examination; clears previous examination results
