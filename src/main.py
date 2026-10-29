@@ -123,11 +123,19 @@ culture_language = {
     "Italian": "italian",
 }
 
+culture_country = {
+    "Colombian": "Colombia",
+    "German": "Germany",
+    "Italian": "Italy",
+}
+
 def cultural_exam(cultures_dimensions, teacher_model=None):
 
-    dimension_names = pd.read_csv(
-        BASE_DIR.parent / "cultural_parameters" / "taxonomy_dimensions.csv"
-    )["Fine-grained Dimension"].tolist()
+    taxonomy = pd.read_csv(
+        BASE_DIR.parent / "cultural_parameters" / "taxonomy_dimensions.csv", sep=";"
+    )
+    dimension_names = taxonomy["Fine-grained Dimension"].tolist()
+    taxonomy = taxonomy.set_index("Fine-grained Dimension")
     dimension_numbers = {name: number for number, name in enumerate(dimension_names, start=1)}
     for dimensions in cultures_dimensions.values():
         for dimension in dimensions:
@@ -155,8 +163,17 @@ def cultural_exam(cultures_dimensions, teacher_model=None):
                     )
             key = f"{culture}_{dimension}"
 
-            extra_text = " in date formats" if dimension == "zero-padding" else ""
-            base_query = f"{dimension}{extra_text} in {culture} culture"
+            group = taxonomy.loc[dimension, "group"]
+            country = culture_country[culture]
+            if group == 1:
+                base_query = f"{dimension} in {country}"
+            elif group == 2:
+                base_query = f"{dimension} in {culture} culture"
+            elif group == 3:
+                context = taxonomy.loc[dimension, "country_adjective_or_context"].strip()
+                base_query = f"{dimension} {context} in {country}"
+            else:
+                raise ValueError(f"Invalid query group for {dimension}: {group}")
             queries = {
                 "english": base_query
             }
@@ -254,9 +271,9 @@ if __name__ == "__main__":
             'career choices',
             'communal living',
             'cultural acknowledgement',
-            'data order',
+            'date order',
             'education',
-            'entity type',
+            'legal entity type',
             'ethnicity',
             'ethnicity assumptions',
             'famous river',
@@ -276,7 +293,7 @@ if __name__ == "__main__":
             'population rank',
             'separator type',
             'social interaction',
-            'stability & resolution',
+            'institutional stability and resolution conflict resolution',
             'widely spoken languages',
             'year format',
         ]
@@ -285,7 +302,7 @@ if __name__ == "__main__":
 
     else:
         csv_path = BASE_DIR.parent / "cultural_parameters" / "taxonomy_dimensions.csv"
-        df = pd.read_csv(csv_path)
+        df = pd.read_csv(csv_path, sep=";")
         dimensions = df["Fine-grained Dimension"].tolist()
         dimension_start = 0 #from 0 to 139
 
